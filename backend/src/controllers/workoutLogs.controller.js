@@ -46,6 +46,18 @@ export async function finishWorkoutLog(req, res) {
   res.json(serializeLog(updated));
 }
 
+export async function cancelWorkoutLog(req, res) {
+  const id = Number(req.params.id);
+  const log = await prisma.workoutLog.findUnique({ where: { id } });
+  if (!log) return res.status(404).json({ error: "Registro não encontrado" });
+  if (log.finishedAt) {
+    return res.status(400).json({ error: "Treino já foi concluído e não pode ser cancelado" });
+  }
+
+  await prisma.workoutLog.delete({ where: { id } });
+  res.status(204).send();
+}
+
 export async function getActiveWorkoutLog(req, res) {
   const log = await prisma.workoutLog.findFirst({
     where: { finishedAt: null },

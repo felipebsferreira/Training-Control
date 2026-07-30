@@ -4,6 +4,7 @@ import {
   listWorkouts,
   startWorkout,
   finishWorkout,
+  cancelWorkout,
   getActiveWorkoutLog,
   formatDuration,
   WEEKDAYS,
@@ -71,6 +72,22 @@ export default function TodayWorkout() {
       setActiveLog(null);
     } catch {
       setError("Não foi possível concluir o treino");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (!activeLog) return;
+    if (!confirm("Cancelar este treino? O que já foi feito não será registrado no histórico.")) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await cancelWorkout(activeLog.id);
+      setActiveLog(null);
+      setLastFinished(null);
+    } catch {
+      setError("Não foi possível cancelar o treino");
     } finally {
       setBusy(false);
     }
@@ -150,13 +167,22 @@ export default function TodayWorkout() {
               </div>
               <div className="flex items-center gap-3 mt-3">
                 {sessionActive ? (
-                  <button
-                    onClick={handleFinish}
-                    disabled={busy}
-                    className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
-                  >
-                    {busy ? "Registrando..." : "✅ Concluir treino"}
-                  </button>
+                  <>
+                    <button
+                      onClick={handleFinish}
+                      disabled={busy}
+                      className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                      {busy ? "Registrando..." : "✅ Concluir treino"}
+                    </button>
+                    <button
+                      onClick={handleCancel}
+                      disabled={busy}
+                      className="px-4 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
+                    >
+                      Cancelar treino
+                    </button>
+                  </>
                 ) : (
                   <button
                     onClick={handleStart}

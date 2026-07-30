@@ -81,6 +81,10 @@ export async function getActiveWorkoutLog() {
   return data;
 }
 
+export async function cancelWorkout(logId) {
+  await api.delete(`/workout-logs/${logId}`);
+}
+
 export async function listWorkoutLogs(limit = 20) {
   const { data } = await api.get("/workout-logs", { params: { limit } });
   return data;
