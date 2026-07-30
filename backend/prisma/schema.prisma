@@ -74,3 +74,24 @@ model ExerciseSet {
 
   @@unique([exerciseId, setNumber])
 }
+
+model Profile {
+  id            Int           @id @default(autoincrement())
+  name          String
+  birthDate     DateTime?
+  biologicalSex String?
+  heightCm      Float?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  weightEntries WeightEntry[]
+}
+
+model WeightEntry {
+  id         Int      @id @default(autoincrement())
+  profileId  Int
+  weightKg   Float
+  recordedAt DateTime @default(now())
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, recordedAt])
+}

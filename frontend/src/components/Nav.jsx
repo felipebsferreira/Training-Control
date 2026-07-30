@@ -4,6 +4,7 @@ const links = [
   { to: "/today", label: "Hoje", icon: "▶️" },
   { to: "/", label: "Semana", icon: "📅" },
   { to: "/workouts", label: "Treinos", icon: "🏋️" },
+  { to: "/profile", label: "Perfil", icon: "👤" },
 ];
 
 function linkClasses({ isActive }) {

@@ -96,3 +96,18 @@ export function formatDuration(minutes) {
   const rest = minutes % 60;
   return rest === 0 ? `${hours}h` : `${hours}h${String(rest).padStart(2, "0")}min`;
 }
+
+export async function getProfile() {
+  const { data } = await api.get("/profile");
+  return data;
+}
+
+export async function saveProfile(payload) {
+  const { data } = await api.put("/profile", payload);
+  return data;
+}
+
+export async function saveWeight(weightKg) {
+  const { data } = await api.post("/profile/weight", { weightKg });
+  return data;
+}
