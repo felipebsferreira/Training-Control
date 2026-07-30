@@ -1,17 +1,24 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { workoutsRouter } from "./routes/workouts.routes.js";
 import { exercisesRouter } from "./routes/exercises.routes.js";
 import { workoutLogsRouter } from "./routes/workoutLogs.routes.js";
 import { profileRouter } from "./routes/profile.routes.js";
 import { statsRouter } from "./routes/stats.routes.js";
+import { authRouter } from "./routes/auth.routes.js";
+import { requireAuth } from "./middleware/requireAuth.js";
 
 export const app = express();
 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
+app.use("/api/auth", authRouter);
+
+app.use("/api", requireAuth);
 app.use("/api/workouts", workoutsRouter);
 app.use("/api/exercises", exercisesRouter);
 app.use("/api/workout-logs", workoutLogsRouter);

@@ -26,7 +26,7 @@ function validateExercisePayload(body) {
 
 export async function createExercise(req, res) {
   const workoutId = Number(req.params.workoutId);
-  const workout = await prisma.workout.findUnique({ where: { id: workoutId } });
+  const workout = await prisma.workout.findFirst({ where: { id: workoutId, userId: req.userId } });
   if (!workout) return res.status(404).json({ error: "Treino não encontrado" });
 
   const error = validateExercisePayload(req.body);
@@ -71,7 +71,7 @@ export async function createExercise(req, res) {
 
 export async function updateExercise(req, res) {
   const id = Number(req.params.id);
-  const existing = await prisma.exercise.findUnique({ where: { id } });
+  const existing = await prisma.exercise.findFirst({ where: { id, workout: { userId: req.userId } } });
   if (!existing) return res.status(404).json({ error: "Exercício não encontrado" });
 
   const error = validateExercisePayload(req.body);
@@ -117,7 +117,7 @@ export async function updateExercise(req, res) {
 
 export async function updateExerciseLoad(req, res) {
   const id = Number(req.params.id);
-  const existing = await prisma.exercise.findUnique({ where: { id } });
+  const existing = await prisma.exercise.findFirst({ where: { id, workout: { userId: req.userId } } });
   if (!existing) return res.status(404).json({ error: "Exercício não encontrado" });
 
   const { load, loadUnit } = req.body;
@@ -147,7 +147,7 @@ export async function updateExerciseLoad(req, res) {
 
 export async function getExerciseLoadHistory(req, res) {
   const id = Number(req.params.id);
-  const exercise = await prisma.exercise.findUnique({ where: { id } });
+  const exercise = await prisma.exercise.findFirst({ where: { id, workout: { userId: req.userId } } });
   if (!exercise) return res.status(404).json({ error: "Exercício não encontrado" });
 
   const entries = await prisma.loadHistory.findMany({
@@ -160,7 +160,7 @@ export async function getExerciseLoadHistory(req, res) {
 
 export async function deleteExercise(req, res) {
   const id = Number(req.params.id);
-  const existing = await prisma.exercise.findUnique({ where: { id } });
+  const existing = await prisma.exercise.findFirst({ where: { id, workout: { userId: req.userId } } });
   if (!existing) return res.status(404).json({ error: "Exercício não encontrado" });
 
   await prisma.exercise.delete({ where: { id } });

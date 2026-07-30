@@ -1,6 +1,6 @@
 # TrainingControl
 
-App para gerenciar treinos de musculação: cadastre treinos em dias específicos da semana e detalhe cada exercício (nome, técnica/método, séries, repetições por série, carga atual e faixa de descanso).
+App multiusuário para gerenciar treinos de musculação: cadastre treinos em dias específicos da semana e detalhe cada exercício (nome, técnica/método, séries, repetições por série, carga atual e faixa de descanso). Cada conta só vê os próprios dados.
 
 ## Stack
 
@@ -19,7 +19,7 @@ App para gerenciar treinos de musculação: cadastre treinos em dias específico
 npm install
 ```
 
-O arquivo `backend/.env` já aponta para o banco `training_control` com o usuário `training_app` (criado durante a configuração inicial). Se precisar recriar o banco:
+O arquivo `backend/.env` já aponta para o banco `training_control` com o usuário `training_app` (criado durante a configuração inicial) e inclui um `JWT_SECRET` usado para assinar a sessão de login — troque por um valor aleatório próprio se for além de uso local (veja `backend/.env.example`). Se precisar recriar o banco:
 
 ```bash
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS training_control CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"

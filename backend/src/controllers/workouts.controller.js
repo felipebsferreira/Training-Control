@@ -11,10 +11,10 @@ const exerciseInclude = {
 
 export async function listWorkouts(req, res) {
   const { day } = req.query;
-  const where =
-    day !== undefined
-      ? { schedules: { some: { dayOfWeek: Number(day) } } }
-      : {};
+  const where = {
+    userId: req.userId,
+    ...(day !== undefined ? { schedules: { some: { dayOfWeek: Number(day) } } } : {}),
+  };
 
   const workouts = await prisma.workout.findMany({
     where,
@@ -27,8 +27,8 @@ export async function listWorkouts(req, res) {
 
 export async function getWorkout(req, res) {
   const id = Number(req.params.id);
-  const workout = await prisma.workout.findUnique({
-    where: { id },
+  const workout = await prisma.workout.findFirst({
+    where: { id, userId: req.userId },
     include: exerciseInclude,
   });
 
@@ -45,6 +45,7 @@ export async function createWorkout(req, res) {
 
   const workout = await prisma.workout.create({
     data: {
+      userId: req.userId,
       name: name.trim(),
       description: description?.trim() || null,
       schedules: {
@@ -61,7 +62,7 @@ export async function updateWorkout(req, res) {
   const id = Number(req.params.id);
   const { name, description, daysOfWeek } = req.body;
 
-  const existing = await prisma.workout.findUnique({ where: { id } });
+  const existing = await prisma.workout.findFirst({ where: { id, userId: req.userId } });
   if (!existing) return res.status(404).json({ error: "Treino não encontrado" });
 
   if (!name || !name.trim()) {
@@ -92,7 +93,7 @@ export async function updateWorkout(req, res) {
 
 export async function deleteWorkout(req, res) {
   const id = Number(req.params.id);
-  const existing = await prisma.workout.findUnique({ where: { id } });
+  const existing = await prisma.workout.findFirst({ where: { id, userId: req.userId } });
   if (!existing) return res.status(404).json({ error: "Treino não encontrado" });
 
   await prisma.workout.delete({ where: { id } });

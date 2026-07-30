@@ -37,15 +37,17 @@ const sessionExerciseInclude = {
 
 export async function startWorkoutLog(req, res) {
   const workoutId = Number(req.params.id);
-  const workout = await prisma.workout.findUnique({
-    where: { id: workoutId },
+  const workout = await prisma.workout.findFirst({
+    where: { id: workoutId, userId: req.userId },
     include: {
       exercises: { orderBy: { orderIndex: "asc" }, include: { sets: { orderBy: { setNumber: "asc" } } } },
     },
   });
   if (!workout) return res.status(404).json({ error: "Treino não encontrado" });
 
-  const active = await prisma.workoutLog.findFirst({ where: { finishedAt: null } });
+  const active = await prisma.workoutLog.findFirst({
+    where: { finishedAt: null, workout: { userId: req.userId } },
+  });
   if (active) {
     return res.status(409).json({ error: "Já existe um treino em andamento" });
   }
@@ -76,8 +78,8 @@ export async function startWorkoutLog(req, res) {
 
 export async function finishWorkoutLog(req, res) {
   const id = Number(req.params.id);
-  const log = await prisma.workoutLog.findUnique({
-    where: { id },
+  const log = await prisma.workoutLog.findFirst({
+    where: { id, workout: { userId: req.userId } },
     include: { workout: true, sessionExercises: { include: { sets: true } } },
   });
   if (!log) return res.status(404).json({ error: "Registro não encontrado" });
@@ -99,7 +101,7 @@ export async function finishWorkoutLog(req, res) {
 
 export async function cancelWorkoutLog(req, res) {
   const id = Number(req.params.id);
-  const log = await prisma.workoutLog.findUnique({ where: { id } });
+  const log = await prisma.workoutLog.findFirst({ where: { id, workout: { userId: req.userId } } });
   if (!log) return res.status(404).json({ error: "Registro não encontrado" });
   if (log.finishedAt) {
     return res.status(400).json({ error: "Treino já foi concluído e não pode ser cancelado" });
@@ -111,7 +113,7 @@ export async function cancelWorkoutLog(req, res) {
 
 export async function getActiveWorkoutLog(req, res) {
   const log = await prisma.workoutLog.findFirst({
-    where: { finishedAt: null },
+    where: { finishedAt: null, workout: { userId: req.userId } },
     orderBy: { startedAt: "desc" },
     include: { workout: true, sessionExercises: sessionExerciseInclude },
   });
@@ -123,7 +125,7 @@ export async function updateSessionExercise(req, res) {
   const workoutLogId = Number(req.params.logId);
   const exerciseId = Number(req.params.exerciseId);
 
-  const log = await prisma.workoutLog.findUnique({ where: { id: workoutLogId } });
+  const log = await prisma.workoutLog.findFirst({ where: { id: workoutLogId, workout: { userId: req.userId } } });
   if (!log) return res.status(404).json({ error: "Treino não encontrado" });
   if (log.finishedAt) return res.status(400).json({ error: "Esse treino já foi concluído" });
 
@@ -168,7 +170,7 @@ export async function listWorkoutLogs(req, res) {
   const limit = Math.min(Number(req.query.limit) || 20, 100);
 
   const logs = await prisma.workoutLog.findMany({
-    where: { finishedAt: { not: null } },
+    where: { finishedAt: { not: null }, workout: { userId: req.userId } },
     orderBy: { finishedAt: "desc" },
     take: limit,
     include: { workout: true },

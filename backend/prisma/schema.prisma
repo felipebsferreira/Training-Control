@@ -7,8 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  workouts     Workout[]
+  profile      Profile?
+}
+
 model Workout {
   id          Int               @id @default(autoincrement())
+  userId      Int
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   description String?
   createdAt   DateTime          @default(now())
@@ -102,6 +113,8 @@ model SessionSet {
 
 model Profile {
   id            Int           @id @default(autoincrement())
+  userId        Int           @unique
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   name          String
   birthDate     DateTime?
   biologicalSex String?

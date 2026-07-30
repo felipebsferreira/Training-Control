@@ -1,6 +1,36 @@
 import axios from "axios";
 
-export const api = axios.create({ baseURL: "/api" });
+export const api = axios.create({ baseURL: "/api", withCredentials: true });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const isAuthRoute = error.config?.url?.startsWith("/auth/");
+    if (error.response?.status === 401 && !isAuthRoute && window.location.pathname !== "/login") {
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
+export async function registerUser(email, password) {
+  const { data } = await api.post("/auth/register", { email, password });
+  return data;
+}
+
+export async function loginUser(email, password) {
+  const { data } = await api.post("/auth/login", { email, password });
+  return data;
+}
+
+export async function logoutUser() {
+  await api.post("/auth/logout");
+}
+
+export async function getCurrentUser() {
+  const { data } = await api.get("/auth/me");
+  return data;
+}
 
 export const WEEKDAYS = [
   { value: 0, label: "Dom", fullLabel: "Domingo" },

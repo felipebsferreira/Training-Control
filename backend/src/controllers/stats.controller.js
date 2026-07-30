@@ -16,7 +16,7 @@ function startOfLocalWeek(date) {
 
 export async function getStatsSummary(req, res) {
   const finishedLogs = await prisma.workoutLog.findMany({
-    where: { finishedAt: { not: null } },
+    where: { finishedAt: { not: null }, workout: { userId: req.userId } },
     orderBy: { startedAt: "desc" },
     select: { startedAt: true, finishedAt: true },
   });
@@ -49,6 +49,7 @@ export async function getStatsSummary(req, res) {
 
 export async function getPersonalRecords(req, res) {
   const entries = await prisma.loadHistory.findMany({
+    where: { exercise: { workout: { userId: req.userId } } },
     include: { exercise: { include: { workout: true } } },
     orderBy: { recordedAt: "asc" },
   });
@@ -83,7 +84,7 @@ export async function getConsistency(req, res) {
   start.setDate(start.getDate() - weeks * 7);
 
   const logs = await prisma.workoutLog.findMany({
-    where: { finishedAt: { not: null }, startedAt: { gte: start } },
+    where: { finishedAt: { not: null }, startedAt: { gte: start }, workout: { userId: req.userId } },
     select: { startedAt: true },
   });
 
@@ -98,7 +99,7 @@ export async function getConsistency(req, res) {
 
 export async function getWorkoutRanking(req, res) {
   const logs = await prisma.workoutLog.findMany({
-    where: { finishedAt: { not: null } },
+    where: { finishedAt: { not: null }, workout: { userId: req.userId } },
     include: { workout: true },
   });
 
@@ -120,7 +121,7 @@ export async function getVolumeHistory(req, res) {
   const limit = Math.min(Number(req.query.limit) || 50, 200);
 
   const logs = await prisma.workoutLog.findMany({
-    where: { finishedAt: { not: null } },
+    where: { finishedAt: { not: null }, workout: { userId: req.userId } },
     orderBy: { startedAt: "asc" },
     take: limit,
     include: { sessionExercises: { include: { sets: true } } },
