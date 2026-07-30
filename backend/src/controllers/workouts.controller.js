@@ -98,37 +98,3 @@ export async function deleteWorkout(req, res) {
   await prisma.workout.delete({ where: { id } });
   res.status(204).send();
 }
-
-export async function logWorkout(req, res) {
-  const id = Number(req.params.id);
-  const workout = await prisma.workout.findUnique({ where: { id } });
-  if (!workout) return res.status(404).json({ error: "Treino não encontrado" });
-
-  const log = await prisma.workoutLog.create({ data: { workoutId: id } });
-
-  res.status(201).json({
-    id: log.id,
-    workoutId: log.workoutId,
-    workoutName: workout.name,
-    performedAt: log.performedAt,
-  });
-}
-
-export async function listWorkoutLogs(req, res) {
-  const limit = Math.min(Number(req.query.limit) || 20, 100);
-
-  const logs = await prisma.workoutLog.findMany({
-    orderBy: { performedAt: "desc" },
-    take: limit,
-    include: { workout: true },
-  });
-
-  res.json(
-    logs.map((log) => ({
-      id: log.id,
-      workoutId: log.workoutId,
-      workoutName: log.workout.name,
-      performedAt: log.performedAt,
-    }))
-  );
-}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { listWorkouts, listWorkoutLogs, WEEKDAYS } from "../api/client.js";
+import { listWorkouts, listWorkoutLogs, formatDuration, WEEKDAYS } from "../api/client.js";
 
 function todayIndex() {
   return new Date().getDay();
@@ -110,7 +110,10 @@ export default function Dashboard() {
                 className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3"
               >
                 <span className="font-medium text-slate-700">{log.workoutName}</span>
-                <span className="text-sm text-slate-400">{formatLogDate(log.performedAt)}</span>
+                <span className="text-right">
+                  <span className="block text-sm text-slate-400">{formatLogDate(log.startedAt)}</span>
+                  <span className="block text-xs text-slate-400">{formatDuration(log.durationMinutes)}</span>
+                </span>
               </li>
             ))}
           </ul>

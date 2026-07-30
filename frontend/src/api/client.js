@@ -66,12 +66,29 @@ export async function updateExerciseLoad(id, payload) {
   return data;
 }
 
-export async function logWorkoutCompletion(workoutId) {
-  const { data } = await api.post(`/workouts/${workoutId}/log`);
+export async function startWorkout(workoutId) {
+  const { data } = await api.post(`/workouts/${workoutId}/log/start`);
+  return data;
+}
+
+export async function finishWorkout(logId) {
+  const { data } = await api.patch(`/workout-logs/${logId}/finish`);
+  return data;
+}
+
+export async function getActiveWorkoutLog() {
+  const { data } = await api.get("/workout-logs/active");
   return data;
 }
 
 export async function listWorkoutLogs(limit = 20) {
   const { data } = await api.get("/workout-logs", { params: { limit } });
   return data;
+}
+
+export function formatDuration(minutes) {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}h` : `${hours}h${String(rest).padStart(2, "0")}min`;
 }

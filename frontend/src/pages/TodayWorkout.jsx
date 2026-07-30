@@ -1,23 +1,40 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { listWorkouts, logWorkoutCompletion, WEEKDAYS } from "../api/client.js";
+import {
+  listWorkouts,
+  startWorkout,
+  finishWorkout,
+  getActiveWorkoutLog,
+  formatDuration,
+  WEEKDAYS,
+} from "../api/client.js";
 import ExerciseRunCard from "../components/ExerciseRunCard.jsx";
+
+function formatTime(isoString) {
+  return new Date(isoString).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
 
 export default function TodayWorkout() {
   const [workouts, setWorkouts] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const [activeLog, setActiveLog] = useState(null);
+  const [lastFinished, setLastFinished] = useState(null);
   const [error, setError] = useState(null);
-  const [loggingId, setLoggingId] = useState(null);
-  const [completedIds, setCompletedIds] = useState(new Set());
+  const [busy, setBusy] = useState(false);
 
   const today = WEEKDAYS[new Date().getDay()];
 
   useEffect(() => {
-    listWorkouts()
-      .then((data) => {
-        setWorkouts(data);
-        const scheduled = data.find((w) => w.daysOfWeek.includes(today.value));
-        setSelectedId(scheduled ? scheduled.id : null);
+    Promise.all([listWorkouts(), getActiveWorkoutLog()])
+      .then(([workoutsData, active]) => {
+        setWorkouts(workoutsData);
+        setActiveLog(active);
+        if (active) {
+          setSelectedId(active.workoutId);
+        } else {
+          const scheduled = workoutsData.find((w) => w.daysOfWeek.includes(today.value));
+          setSelectedId(scheduled ? scheduled.id : null);
+        }
       })
       .catch(() => setError("Não foi possível carregar os treinos"));
   }, [today.value]);
@@ -27,16 +44,35 @@ export default function TodayWorkout() {
     [workouts, today.value]
   );
   const selectedWorkout = workouts?.find((w) => w.id === selectedId) ?? null;
+  const sessionActive = Boolean(activeLog);
 
-  async function handleComplete(workoutId) {
-    setLoggingId(workoutId);
+  async function handleStart() {
+    if (!selectedWorkout) return;
+    setBusy(true);
+    setError(null);
     try {
-      await logWorkoutCompletion(workoutId);
-      setCompletedIds((prev) => new Set(prev).add(workoutId));
+      const log = await startWorkout(selectedWorkout.id);
+      setActiveLog(log);
+      setLastFinished(null);
     } catch {
-      setError("Não foi possível registrar o treino como concluído");
+      setError("Não foi possível iniciar o treino");
     } finally {
-      setLoggingId(null);
+      setBusy(false);
+    }
+  }
+
+  async function handleFinish() {
+    if (!activeLog) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const log = await finishWorkout(activeLog.id);
+      setLastFinished({ workoutId: log.workoutId, durationMinutes: log.durationMinutes });
+      setActiveLog(null);
+    } catch {
+      setError("Não foi possível concluir o treino");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -64,7 +100,8 @@ export default function TodayWorkout() {
             <select
               value={selectedId ?? ""}
               onChange={(e) => setSelectedId(e.target.value ? Number(e.target.value) : null)}
-              className="w-full sm:w-auto border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              disabled={sessionActive}
+              className="w-full sm:w-auto border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
             >
               {!scheduledWorkout && <option value="">Selecione um treino</option>}
               {workouts.map((w) => (
@@ -74,15 +111,23 @@ export default function TodayWorkout() {
               ))}
             </select>
 
-            {scheduledWorkout && selectedId !== scheduledWorkout.id && (
-              <p className="text-xs text-slate-400 mt-1">
-                Treino agendado para hoje: {scheduledWorkout.name}. A troca vale só para hoje — a agenda semanal não muda.
+            {sessionActive ? (
+              <p className="text-xs text-emerald-600 mt-1 font-medium">
+                Treino em andamento, iniciado às {formatTime(activeLog.startedAt)}. Conclua para trocar de treino.
               </p>
-            )}
-            {!scheduledWorkout && (
-              <p className="text-xs text-slate-400 mt-1">
-                Nenhum treino agendado para hoje. Escolha um acima para executar mesmo assim.
-              </p>
+            ) : (
+              <>
+                {scheduledWorkout && selectedId !== scheduledWorkout.id && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    Treino agendado para hoje: {scheduledWorkout.name}. A troca vale só para hoje — a agenda semanal não muda.
+                  </p>
+                )}
+                {!scheduledWorkout && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    Nenhum treino agendado para hoje. Escolha um acima para executar mesmo assim.
+                  </p>
+                )}
+              </>
             )}
           </div>
 
@@ -104,15 +149,27 @@ export default function TodayWorkout() {
                 ))}
               </div>
               <div className="flex items-center gap-3 mt-3">
-                <button
-                  onClick={() => handleComplete(selectedWorkout.id)}
-                  disabled={loggingId === selectedWorkout.id}
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
-                >
-                  {loggingId === selectedWorkout.id ? "Registrando..." : "✅ Concluir treino"}
-                </button>
-                {completedIds.has(selectedWorkout.id) && (
-                  <span className="text-sm text-emerald-600 font-medium">Treino registrado ✓</span>
+                {sessionActive ? (
+                  <button
+                    onClick={handleFinish}
+                    disabled={busy}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {busy ? "Registrando..." : "✅ Concluir treino"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleStart}
+                    disabled={busy}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
+                  >
+                    {busy ? "Iniciando..." : "▶️ Iniciar treino"}
+                  </button>
+                )}
+                {lastFinished?.workoutId === selectedWorkout.id && (
+                  <span className="text-sm text-emerald-600 font-medium">
+                    Treino registrado ✓ ({formatDuration(lastFinished.durationMinutes)})
+                  </span>
                 )}
               </div>
             </div>
