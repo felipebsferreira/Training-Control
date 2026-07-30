@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -9,9 +11,20 @@ import { statsRouter } from "./routes/stats.routes.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { requireAuth } from "./middleware/requireAuth.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const isProduction = process.env.NODE_ENV === "production";
+
 export const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
+app.use(
+  cors({
+    // In production the frontend is served by this same Express app (same
+    // origin), so no cross-origin requests are expected — origin:false just
+    // disables the CORS headers rather than reflecting an arbitrary origin.
+    origin: isProduction ? process.env.FRONTEND_URL || false : true,
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -24,6 +37,17 @@ app.use("/api/exercises", exercisesRouter);
 app.use("/api/workout-logs", workoutLogsRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/stats", statsRouter);
+
+if (isProduction) {
+  // Shared hosting (Passenger) routes every request for the domain to this
+  // app — there's no separate Nginx to split /api/* from the frontend build,
+  // so Express has to serve both.
+  const frontendDist = path.join(__dirname, "../../frontend/dist");
+  app.use(express.static(frontendDist));
+  app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.join(frontendDist, "index.html"));
+  });
+}
 
 app.use((err, req, res, next) => {
   console.error(err);

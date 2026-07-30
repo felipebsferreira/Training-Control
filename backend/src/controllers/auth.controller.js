@@ -54,7 +54,7 @@ export async function login(req, res) {
 }
 
 export async function logout(req, res) {
-  res.clearCookie(COOKIE_NAME, { httpOnly: true, sameSite: "lax", secure: false });
+  res.clearCookie(COOKIE_NAME, COOKIE_OPTIONS);
   res.status(204).send();
 }
 
