@@ -124,53 +124,67 @@ export default function Stats() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <div className="flex flex-col gap-3 mb-6">
           <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <p className="text-sm text-slate-400">Peso</p>
-            <p className="text-xl font-semibold text-slate-800 mt-1 mb-2">
-              {weightSeries.length ? `${weightSeries[weightSeries.length - 1].y} kg` : "—"}
-            </p>
-            <LineChart data={weightSeries} color={COLORS.weight} formatValue={(v) => `${v}kg`} height={140} />
+            <div className="flex items-baseline justify-between mb-2">
+              <p className="text-sm text-slate-400">Peso</p>
+              <p className="text-xl font-semibold text-slate-800">
+                {weightSeries.length ? `${weightSeries[weightSeries.length - 1].y} kg` : "—"}
+              </p>
+            </div>
+            <LineChart data={weightSeries} color={COLORS.weight} formatValue={(v) => `${v}kg`} height={220} />
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <p className="text-sm text-slate-400">IMC</p>
             {canComputeBmi ? (
               <>
-                <p className="text-xl font-semibold text-slate-800 mt-1">
-                  {currentBmi != null ? currentBmi.toFixed(1) : "—"}
-                </p>
-                <p className="text-xs text-slate-400 mb-2">{currentBmi != null ? classifyBMI(currentBmi) : ""}</p>
-                <LineChart data={bmiSeries} color={COLORS.bmi} formatValue={(v) => v.toFixed(1)} height={140} />
+                <div className="flex items-baseline justify-between mb-2">
+                  <div>
+                    <p className="text-sm text-slate-400">IMC</p>
+                    {currentBmi != null && <p className="text-xs text-slate-400">{classifyBMI(currentBmi)}</p>}
+                  </div>
+                  <p className="text-xl font-semibold text-slate-800">
+                    {currentBmi != null ? currentBmi.toFixed(1) : "—"}
+                  </p>
+                </div>
+                <LineChart data={bmiSeries} color={COLORS.bmi} formatValue={(v) => v.toFixed(1)} height={220} />
               </>
             ) : (
-              <p className="text-sm text-slate-400 mt-2">
-                Informe a altura no{" "}
-                <Link to="/profile" className="text-indigo-600 hover:underline">
-                  perfil
-                </Link>
-                .
-              </p>
+              <>
+                <p className="text-sm text-slate-400 mb-2">IMC</p>
+                <p className="text-sm text-slate-400">
+                  Informe a altura no{" "}
+                  <Link to="/profile" className="text-indigo-600 hover:underline">
+                    perfil
+                  </Link>
+                  .
+                </p>
+              </>
             )}
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <p className="text-sm text-slate-400">TMB</p>
             {canComputeBmr ? (
               <>
-                <p className="text-xl font-semibold text-slate-800 mt-1 mb-2">
-                  {currentBmr != null ? `${Math.round(currentBmr)} kcal/dia` : "—"}
-                </p>
-                <LineChart data={bmrSeries} color={COLORS.bmr} formatValue={(v) => Math.round(v)} height={140} />
+                <div className="flex items-baseline justify-between mb-2">
+                  <p className="text-sm text-slate-400">TMB</p>
+                  <p className="text-xl font-semibold text-slate-800">
+                    {currentBmr != null ? `${Math.round(currentBmr)} kcal/dia` : "—"}
+                  </p>
+                </div>
+                <LineChart data={bmrSeries} color={COLORS.bmr} formatValue={(v) => Math.round(v)} height={220} />
               </>
             ) : (
-              <p className="text-sm text-slate-400 mt-2">
-                Complete altura, data de nascimento e sexo no{" "}
-                <Link to="/profile" className="text-indigo-600 hover:underline">
-                  perfil
-                </Link>
-                .
-              </p>
+              <>
+                <p className="text-sm text-slate-400 mb-2">TMB</p>
+                <p className="text-sm text-slate-400">
+                  Complete altura, data de nascimento e sexo no{" "}
+                  <Link to="/profile" className="text-indigo-600 hover:underline">
+                    perfil
+                  </Link>
+                  .
+                </p>
+              </>
             )}
           </div>
         </div>
