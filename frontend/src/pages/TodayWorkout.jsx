@@ -15,6 +15,19 @@ function formatTime(isoString) {
   return new Date(isoString).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
+function toReadOnlySessionExercise(exercise) {
+  return {
+    exerciseId: exercise.id,
+    name: exercise.name,
+    technique: exercise.technique,
+    restSecondsMin: exercise.restSecondsMin,
+    restSecondsMax: exercise.restSecondsMax,
+    load: exercise.currentLoad,
+    loadUnit: exercise.loadUnit,
+    sets: exercise.sets,
+  };
+}
+
 export default function TodayWorkout() {
   const [workouts, setWorkouts] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -161,9 +174,17 @@ export default function TodayWorkout() {
                 </Link>
               </div>
               <div className="flex flex-col gap-3">
-                {selectedWorkout.exercises.map((exercise) => (
-                  <ExerciseRunCard key={exercise.id} exercise={exercise} />
-                ))}
+                {sessionActive
+                  ? activeLog.sessionExercises.map((se) => (
+                      <ExerciseRunCard key={se.exerciseId} sessionExercise={se} logId={activeLog.id} />
+                    ))
+                  : selectedWorkout.exercises.map((exercise) => (
+                      <ExerciseRunCard
+                        key={exercise.id}
+                        sessionExercise={toReadOnlySessionExercise(exercise)}
+                        readOnly
+                      />
+                    ))}
               </div>
               <div className="flex items-center gap-3 mt-3">
                 {sessionActive ? (

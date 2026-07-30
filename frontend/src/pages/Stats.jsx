@@ -6,6 +6,10 @@ import {
   getWeightHistory,
   listWorkouts,
   getExerciseLoadHistory,
+  getPersonalRecords,
+  getConsistency,
+  getWorkoutRanking,
+  getVolumeHistory,
   calculateAge,
   calculateBMI,
   classifyBMI,
@@ -13,12 +17,15 @@ import {
   formatDuration,
 } from "../api/client.js";
 import LineChart from "../components/LineChart.jsx";
+import ConsistencyHeatmap from "../components/ConsistencyHeatmap.jsx";
 
 const COLORS = {
   weight: "#4f46e5",
   bmi: "#d97706",
   bmr: "#7c3aed",
   load: "#0d9488",
+  volume: "#db2777",
+  ranking: "#4f46e5",
 };
 
 function KpiCard({ label, value }) {
@@ -30,6 +37,10 @@ function KpiCard({ label, value }) {
   );
 }
 
+function formatDateShort(isoString) {
+  return new Date(isoString).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+}
+
 export default function Stats() {
   const [summary, setSummary] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -37,15 +48,32 @@ export default function Stats() {
   const [workouts, setWorkouts] = useState(null);
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
   const [loadHistory, setLoadHistory] = useState(null);
+  const [personalRecords, setPersonalRecords] = useState(null);
+  const [consistency, setConsistency] = useState(null);
+  const [workoutRanking, setWorkoutRanking] = useState(null);
+  const [volumeHistory, setVolumeHistory] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    Promise.all([getStatsSummary(), getProfile(), getWeightHistory(), listWorkouts()])
-      .then(([summaryData, profileData, weightData, workoutsData]) => {
+    Promise.all([
+      getStatsSummary(),
+      getProfile(),
+      getWeightHistory(),
+      listWorkouts(),
+      getPersonalRecords(),
+      getConsistency(),
+      getWorkoutRanking(),
+      getVolumeHistory(),
+    ])
+      .then(([summaryData, profileData, weightData, workoutsData, records, consistencyData, ranking, volume]) => {
         setSummary(summaryData);
         setProfile(profileData);
         setWeightHistory(weightData);
         setWorkouts(workoutsData);
+        setPersonalRecords(records);
+        setConsistency(consistencyData);
+        setWorkoutRanking(ranking);
+        setVolumeHistory(volume);
 
         const firstExercise = workoutsData.flatMap((w) => w.exercises)[0];
         if (firstExercise) setSelectedExerciseId(firstExercise.id);
@@ -63,6 +91,11 @@ export default function Stats() {
   const weightSeries = useMemo(
     () => (weightHistory ?? []).map((e) => ({ x: new Date(e.recordedAt), y: e.weightKg })),
     [weightHistory]
+  );
+
+  const volumeSeries = useMemo(
+    () => (volumeHistory ?? []).map((e) => ({ x: new Date(e.recordedAt), y: Math.round(e.volume) })),
+    [volumeHistory]
   );
 
   const canComputeBmi = profile?.heightCm != null;
@@ -221,6 +254,78 @@ export default function Stats() {
           />
         </div>
       )}
+
+      <h2 className="text-lg font-bold text-slate-800 mb-3 mt-6">Volume total</h2>
+      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6">
+        <LineChart data={volumeSeries} color={COLORS.volume} formatValue={(v) => `${Math.round(v)}kg`} />
+        <p className="text-xs text-slate-400 mt-2">
+          Soma de repetições × carga de cada série registrada por sessão concluída.
+        </p>
+      </div>
+
+      <h2 className="text-lg font-bold text-slate-800 mb-3">Recordes pessoais</h2>
+      <div className="bg-white border border-slate-200 rounded-xl mb-6 overflow-hidden">
+        {!personalRecords || personalRecords.length === 0 ? (
+          <p className="text-slate-500 p-4">Nenhum recorde registrado ainda.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {personalRecords.map((r) => (
+              <li key={r.exerciseId} className="px-4 py-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-medium text-slate-700">{r.exerciseName}</p>
+                  <p className="text-xs text-slate-400">{r.workoutName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-slate-800">
+                    {r.load}
+                    {r.loadUnit}
+                  </p>
+                  <p className="text-xs text-slate-400">{formatDateShort(r.recordedAt)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <h2 className="text-lg font-bold text-slate-800 mb-3">Consistência</h2>
+      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6">
+        {!consistency ? (
+          <p className="text-slate-500">Carregando...</p>
+        ) : (
+          <ConsistencyHeatmap data={consistency} weeks={16} />
+        )}
+      </div>
+
+      <h2 className="text-lg font-bold text-slate-800 mb-3">Treinos mais executados</h2>
+      <div className="bg-white border border-slate-200 rounded-xl p-4">
+        {!workoutRanking || workoutRanking.length === 0 ? (
+          <p className="text-slate-500">Nenhum treino concluído ainda.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {workoutRanking.map((r) => {
+              const max = Math.max(...workoutRanking.map((x) => x.count));
+              const widthPct = Math.max((r.count / max) * 100, 6);
+              return (
+                <div key={r.workoutId}>
+                  <div className="flex items-baseline justify-between mb-1 text-sm">
+                    <span className="font-medium text-slate-700">{r.workoutName}</span>
+                    <span className="text-slate-400">
+                      {r.count} treino{r.count === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <div className="h-4 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${widthPct}%`, backgroundColor: COLORS.ranking }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

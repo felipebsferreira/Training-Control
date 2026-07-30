@@ -19,11 +19,12 @@ model Workout {
 }
 
 model WorkoutLog {
-  id         Int       @id @default(autoincrement())
-  workoutId  Int
-  startedAt  DateTime  @default(now())
-  finishedAt DateTime?
-  workout    Workout   @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  id               Int               @id @default(autoincrement())
+  workoutId        Int
+  startedAt        DateTime          @default(now())
+  finishedAt       DateTime?
+  workout          Workout           @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  sessionExercises SessionExercise[]
 
   @@index([startedAt])
   @@index([finishedAt])
@@ -39,19 +40,20 @@ model WorkoutSchedule {
 }
 
 model Exercise {
-  id             Int           @id @default(autoincrement())
-  workoutId      Int
-  name           String
-  technique      String?
-  setsCount      Int
-  restSecondsMin Int
-  restSecondsMax Int
-  currentLoad    Float?
-  loadUnit       String        @default("kg")
-  orderIndex     Int           @default(0)
-  workout        Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
-  sets           ExerciseSet[]
-  loadHistory    LoadHistory[]
+  id               Int               @id @default(autoincrement())
+  workoutId        Int
+  name             String
+  technique        String?
+  setsCount        Int
+  restSecondsMin   Int
+  restSecondsMax   Int
+  currentLoad      Float?
+  loadUnit         String            @default("kg")
+  orderIndex       Int               @default(0)
+  workout          Workout           @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  sets             ExerciseSet[]
+  loadHistory      LoadHistory[]
+  sessionExercises SessionExercise[]
 }
 
 model LoadHistory {
@@ -73,6 +75,29 @@ model ExerciseSet {
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@unique([exerciseId, setNumber])
+}
+
+model SessionExercise {
+  id           Int        @id @default(autoincrement())
+  workoutLogId Int
+  exerciseId   Int
+  load         Float?
+  loadUnit     String     @default("kg")
+  workoutLog   WorkoutLog @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
+  exercise     Exercise   @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  sets         SessionSet[]
+
+  @@unique([workoutLogId, exerciseId])
+}
+
+model SessionSet {
+  id                Int             @id @default(autoincrement())
+  sessionExerciseId Int
+  setNumber         Int
+  reps              Int
+  sessionExercise   SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionExerciseId, setNumber])
 }
 
 model Profile {

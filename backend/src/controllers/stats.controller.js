@@ -46,3 +46,93 @@ export async function getStatsSummary(req, res) {
 
   res.json({ workoutsThisWeek, currentStreakDays, averageDurationMinutes });
 }
+
+export async function getPersonalRecords(req, res) {
+  const entries = await prisma.loadHistory.findMany({
+    include: { exercise: { include: { workout: true } } },
+    orderBy: { recordedAt: "asc" },
+  });
+
+  const bestByExercise = new Map();
+  for (const entry of entries) {
+    const current = bestByExercise.get(entry.exerciseId);
+    if (!current || entry.load > current.load) {
+      bestByExercise.set(entry.exerciseId, entry);
+    }
+  }
+
+  const records = Array.from(bestByExercise.values())
+    .map((entry) => ({
+      exerciseId: entry.exerciseId,
+      exerciseName: entry.exercise.name,
+      workoutName: entry.exercise.workout.name,
+      load: entry.load,
+      loadUnit: entry.loadUnit,
+      recordedAt: entry.recordedAt,
+    }))
+    .sort((a, b) => new Date(b.recordedAt) - new Date(a.recordedAt));
+
+  res.json(records);
+}
+
+export async function getConsistency(req, res) {
+  const weeks = Math.min(Number(req.query.weeks) || 16, 52);
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - weeks * 7);
+
+  const logs = await prisma.workoutLog.findMany({
+    where: { finishedAt: { not: null }, startedAt: { gte: start } },
+    select: { startedAt: true },
+  });
+
+  const counts = new Map();
+  for (const log of logs) {
+    const key = localDateKey(log.startedAt);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  res.json(Array.from(counts.entries()).map(([date, count]) => ({ date, count })));
+}
+
+export async function getWorkoutRanking(req, res) {
+  const logs = await prisma.workoutLog.findMany({
+    where: { finishedAt: { not: null } },
+    include: { workout: true },
+  });
+
+  const counts = new Map();
+  for (const log of logs) {
+    const current = counts.get(log.workoutId) ?? {
+      workoutId: log.workoutId,
+      workoutName: log.workout.name,
+      count: 0,
+    };
+    current.count++;
+    counts.set(log.workoutId, current);
+  }
+
+  res.json(Array.from(counts.values()).sort((a, b) => b.count - a.count));
+}
+
+export async function getVolumeHistory(req, res) {
+  const limit = Math.min(Number(req.query.limit) || 50, 200);
+
+  const logs = await prisma.workoutLog.findMany({
+    where: { finishedAt: { not: null } },
+    orderBy: { startedAt: "asc" },
+    take: limit,
+    include: { sessionExercises: { include: { sets: true } } },
+  });
+
+  res.json(
+    logs.map((log) => {
+      const volume = log.sessionExercises.reduce((sum, se) => {
+        const reps = se.sets.reduce((s, set) => s + set.reps, 0);
+        return sum + (se.load ?? 0) * reps;
+      }, 0);
+      return { recordedAt: log.startedAt, volume };
+    })
+  );
+}

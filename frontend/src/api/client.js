@@ -127,6 +127,31 @@ export async function getStatsSummary() {
   return data;
 }
 
+export async function updateSessionExercise(logId, exerciseId, payload) {
+  const { data } = await api.put(`/workout-logs/${logId}/exercises/${exerciseId}`, payload);
+  return data;
+}
+
+export async function getPersonalRecords() {
+  const { data } = await api.get("/stats/personal-records");
+  return data;
+}
+
+export async function getConsistency(weeks = 16) {
+  const { data } = await api.get("/stats/consistency", { params: { weeks } });
+  return data;
+}
+
+export async function getWorkoutRanking() {
+  const { data } = await api.get("/stats/workout-ranking");
+  return data;
+}
+
+export async function getVolumeHistory() {
+  const { data } = await api.get("/stats/volume-history");
+  return data;
+}
+
 export function calculateAge(birthDate, atDate = new Date()) {
   const birth = new Date(birthDate);
   let age = atDate.getFullYear() - birth.getFullYear();
