@@ -111,3 +111,45 @@ export async function saveWeight(weightKg) {
   const { data } = await api.post("/profile/weight", { weightKg });
   return data;
 }
+
+export async function getWeightHistory(limit = 100) {
+  const { data } = await api.get("/profile/weight-history", { params: { limit } });
+  return data;
+}
+
+export async function getExerciseLoadHistory(exerciseId) {
+  const { data } = await api.get(`/exercises/${exerciseId}/load-history`);
+  return data;
+}
+
+export async function getStatsSummary() {
+  const { data } = await api.get("/stats/summary");
+  return data;
+}
+
+export function calculateAge(birthDate, atDate = new Date()) {
+  const birth = new Date(birthDate);
+  let age = atDate.getFullYear() - birth.getFullYear();
+  const monthDiff = atDate.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && atDate.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+export function calculateBMI(weightKg, heightCm) {
+  const heightM = heightCm / 100;
+  return weightKg / (heightM * heightM);
+}
+
+export function classifyBMI(bmi) {
+  if (bmi < 18.5) return "Abaixo do peso";
+  if (bmi < 25) return "Peso normal";
+  if (bmi < 30) return "Sobrepeso";
+  return "Obesidade";
+}
+
+export function calculateBMR(weightKg, heightCm, age, biologicalSex) {
+  const base = 10 * weightKg + 6.25 * heightCm - 5 * age;
+  return biologicalSex === "M" ? base + 5 : base - 161;
+}

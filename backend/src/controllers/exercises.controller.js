@@ -145,6 +145,19 @@ export async function updateExerciseLoad(req, res) {
   res.json(serializeExercise(exercise));
 }
 
+export async function getExerciseLoadHistory(req, res) {
+  const id = Number(req.params.id);
+  const exercise = await prisma.exercise.findUnique({ where: { id } });
+  if (!exercise) return res.status(404).json({ error: "Exercício não encontrado" });
+
+  const entries = await prisma.loadHistory.findMany({
+    where: { exerciseId: id },
+    orderBy: { recordedAt: "asc" },
+  });
+
+  res.json(entries.map((e) => ({ recordedAt: e.recordedAt, load: e.load, loadUnit: e.loadUnit })));
+}
+
 export async function deleteExercise(req, res) {
   const id = Number(req.params.id);
   const existing = await prisma.exercise.findUnique({ where: { id } });

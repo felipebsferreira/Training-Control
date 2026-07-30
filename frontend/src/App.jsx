@@ -6,6 +6,7 @@ import WorkoutForm from "./pages/WorkoutForm.jsx";
 import WorkoutDetail from "./pages/WorkoutDetail.jsx";
 import TodayWorkout from "./pages/TodayWorkout.jsx";
 import Profile from "./pages/Profile.jsx";
+import Stats from "./pages/Stats.jsx";
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/workouts/:id/edit" element={<WorkoutForm />} />
           <Route path="/workouts/:id" element={<WorkoutDetail />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/stats" element={<Stats />} />
         </Routes>
       </main>
     </div>

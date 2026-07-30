@@ -66,3 +66,22 @@ export async function addWeightEntry(req, res) {
   const latestWeight = await getLatestWeight(profile.id);
   res.json(serializeProfile(profile, latestWeight));
 }
+
+export async function listWeightHistory(req, res) {
+  const profile = await prisma.profile.findFirst();
+  if (!profile) return res.json([]);
+
+  const limit = Math.min(Number(req.query.limit) || 100, 500);
+
+  const entries = await prisma.weightEntry.findMany({
+    where: { profileId: profile.id },
+    orderBy: { recordedAt: "desc" },
+    take: limit,
+  });
+
+  res.json(
+    entries
+      .map((e) => ({ recordedAt: e.recordedAt, weightKg: e.weightKg }))
+      .reverse()
+  );
+}
