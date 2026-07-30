@@ -1,0 +1,77 @@
+import axios from "axios";
+
+export const api = axios.create({ baseURL: "/api" });
+
+export const WEEKDAYS = [
+  { value: 0, label: "Dom", fullLabel: "Domingo" },
+  { value: 1, label: "Seg", fullLabel: "Segunda" },
+  { value: 2, label: "Ter", fullLabel: "Terça" },
+  { value: 3, label: "Qua", fullLabel: "Quarta" },
+  { value: 4, label: "Qui", fullLabel: "Quinta" },
+  { value: 5, label: "Sex", fullLabel: "Sexta" },
+  { value: 6, label: "Sáb", fullLabel: "Sábado" },
+];
+
+export const TECHNIQUE_PRESETS = [
+  "Normal",
+  "Pirâmide Crescente",
+  "Pirâmide Decrescente",
+  "Drop Set",
+  "Bi-set",
+  "Tri-set",
+  "Super-set",
+  "Rest-Pause",
+];
+
+export async function listWorkouts(day) {
+  const { data } = await api.get("/workouts", { params: day !== undefined ? { day } : {} });
+  return data;
+}
+
+export async function getWorkout(id) {
+  const { data } = await api.get(`/workouts/${id}`);
+  return data;
+}
+
+export async function createWorkout(payload) {
+  const { data } = await api.post("/workouts", payload);
+  return data;
+}
+
+export async function updateWorkout(id, payload) {
+  const { data } = await api.put(`/workouts/${id}`, payload);
+  return data;
+}
+
+export async function deleteWorkout(id) {
+  await api.delete(`/workouts/${id}`);
+}
+
+export async function createExercise(workoutId, payload) {
+  const { data } = await api.post(`/workouts/${workoutId}/exercises`, payload);
+  return data;
+}
+
+export async function updateExercise(id, payload) {
+  const { data } = await api.put(`/exercises/${id}`, payload);
+  return data;
+}
+
+export async function deleteExercise(id) {
+  await api.delete(`/exercises/${id}`);
+}
+
+export async function updateExerciseLoad(id, payload) {
+  const { data } = await api.patch(`/exercises/${id}/load`, payload);
+  return data;
+}
+
+export async function logWorkoutCompletion(workoutId) {
+  const { data } = await api.post(`/workouts/${workoutId}/log`);
+  return data;
+}
+
+export async function listWorkoutLogs(limit = 20) {
+  const { data } = await api.get("/workout-logs", { params: { limit } });
+  return data;
+}

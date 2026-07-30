@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Workout {
+  id          Int               @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  schedules   WorkoutSchedule[]
+  exercises   Exercise[]
+  logs        WorkoutLog[]
+}
+
+model WorkoutLog {
+  id          Int      @id @default(autoincrement())
+  workoutId   Int
+  performedAt DateTime @default(now())
+  workout     Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([performedAt])
+}
+
+model WorkoutSchedule {
+  id        Int     @id @default(autoincrement())
+  workoutId Int
+  dayOfWeek Int
+  workout   Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@unique([workoutId, dayOfWeek])
+}
+
+model Exercise {
+  id             Int           @id @default(autoincrement())
+  workoutId      Int
+  name           String
+  technique      String?
+  setsCount      Int
+  restSecondsMin Int
+  restSecondsMax Int
+  currentLoad    Float?
+  loadUnit       String        @default("kg")
+  orderIndex     Int           @default(0)
+  workout        Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  sets           ExerciseSet[]
+  loadHistory    LoadHistory[]
+}
+
+model LoadHistory {
+  id         Int      @id @default(autoincrement())
+  exerciseId Int
+  load       Float
+  loadUnit   String
+  recordedAt DateTime @default(now())
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId, recordedAt])
+}
+
+model ExerciseSet {
+  id         Int      @id @default(autoincrement())
+  exerciseId Int
+  setNumber  Int
+  reps       Int
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([exerciseId, setNumber])
+}
