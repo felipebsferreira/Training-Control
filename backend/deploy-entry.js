@@ -4,21 +4,41 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// This host's process doesn't reliably have `npm`/`npx` resolvable on PATH
+// when spawning a child via execSync (fails instantly, no output at all —
+// classic "command not found", even though npm works fine over SSH). Resolve
+// them from the same directory as the currently running `node` binary
+// instead of trusting PATH — npm/npx are always siblings of node in any
+// standard install layout.
+const nodeBinDir = path.dirname(process.execPath);
+const npmBin = path.join(nodeBinDir, "npm");
+const npxBin = path.join(nodeBinDir, "npx");
+
+function run(command) {
+  console.log(`$ ${command}`);
+  execSync(command, {
+    cwd: __dirname,
+    stdio: "inherit",
+    env: { ...process.env, PATH: `${nodeBinDir}:${process.env.PATH || ""}` },
+  });
+}
+
 if (process.env.NODE_ENV === "production") {
   // This host deploys "backend" as an isolated copy — no sibling frontend/
-  // folder, no monorepo root, and (it turns out) no dependencies pre-installed
-  // either. So install has to happen here, scoped strictly to this directory
-  // (no `../`): __dirname IS the project root as far as this running copy is
+  // folder, no monorepo root, and no dependencies pre-installed either. So
+  // install has to happen here, scoped strictly to this directory (no
+  // `../`): __dirname IS the project root as far as this running copy is
   // concerned, since nothing outside it exists on this host.
   console.log("Installing dependencies...");
-  execSync("npm install", { cwd: __dirname, stdio: "inherit" });
+  run(`"${npmBin}" install`);
 
   // Wrapped in try/catch, not left to crash the app: @prisma/client's own
   // postinstall may already have generated the client during the install
   // above, making this redundant but harmless when it works, and non-fatal
   // when this specific command can't run here.
   try {
-    execSync("npx prisma generate", { cwd: __dirname, stdio: "inherit" });
+    console.log("Generating Prisma Client...");
+    run(`"${npxBin}" prisma generate`);
   } catch (err) {
     console.error("prisma generate failed (continuing — client may already be generated):", err.message);
   }
