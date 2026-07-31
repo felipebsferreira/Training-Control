@@ -21,7 +21,7 @@ export default function ExerciseRunCard({ sessionExercise, logId, readOnly }) {
     load !== "" &&
     Number.isFinite(Number(load)) &&
     Number(load) >= 0 &&
-    sets.every((s) => Number.isInteger(s.reps) && s.reps > 0);
+    sets.every((s) => s.reps !== "" && Number.isInteger(Number(s.reps)) && Number(s.reps) > 0);
 
   async function handleSave() {
     if (!isValid) return;
@@ -31,7 +31,7 @@ export default function ExerciseRunCard({ sessionExercise, logId, readOnly }) {
       const updated = await updateSessionExercise(logId, sessionExercise.exerciseId, {
         load: Number(load),
         loadUnit,
-        sets,
+        sets: sets.map((s) => ({ reps: Number(s.reps) })),
       });
       setSavedState({ load: updated.load, sets: updated.sets });
       setSaved(true);

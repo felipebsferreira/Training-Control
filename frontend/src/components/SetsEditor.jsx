@@ -18,7 +18,7 @@ export default function SetsEditor({ sets, onChange }) {
               type="number"
               min={1}
               value={set.reps}
-              onChange={(e) => updateReps(index, Number(e.target.value))}
+              onChange={(e) => updateReps(index, e.target.value)}
               className="w-full text-center border border-slate-300 rounded-lg py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>

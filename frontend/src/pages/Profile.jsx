@@ -78,8 +78,8 @@ export default function Profile() {
       setCurrentWeightKg(updated.currentWeightKg);
       setWeightSaved(true);
       setTimeout(() => setWeightSaved(false), 2000);
-    } catch {
-      setError("Não foi possível salvar o peso");
+    } catch (err) {
+      setError(err.response?.data?.error || "Não foi possível salvar o peso");
     } finally {
       setSavingWeight(false);
     }

@@ -37,8 +37,14 @@ export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting 
     setForm((f) => ({ ...f, [field]: value }));
   }
 
-  function setSetsCount(count) {
-    const clamped = Math.max(1, Math.min(20, count));
+  function setSetsCount(rawValue) {
+    if (rawValue === "") {
+      setForm((f) => ({ ...f, setsCount: "" }));
+      return;
+    }
+    const parsed = Number(rawValue);
+    if (!Number.isInteger(parsed)) return;
+    const clamped = Math.max(1, Math.min(20, parsed));
     setForm((f) => {
       const nextSets = Array.from({ length: clamped }, (_, i) => f.sets[i] || { reps: f.sets.at(-1)?.reps ?? 12 });
       return { ...f, setsCount: clamped, sets: nextSets };
@@ -50,8 +56,17 @@ export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting 
     setError(null);
 
     if (!form.name.trim()) return setError("Informe o nome do exercício");
+    if (form.setsCount === "" || !Number.isInteger(Number(form.setsCount)) || Number(form.setsCount) < 1) {
+      return setError("Informe o número de séries");
+    }
+    if (form.restSecondsMin === "" || form.restSecondsMax === "") {
+      return setError("Informe o descanso mínimo e máximo");
+    }
     if (Number(form.restSecondsMin) > Number(form.restSecondsMax)) {
       return setError("Descanso mínimo não pode ser maior que o máximo");
+    }
+    if (form.sets.some((s) => s.reps === "" || !Number.isInteger(Number(s.reps)) || Number(s.reps) <= 0)) {
+      return setError("Informe as repetições de todas as séries");
     }
 
     const technique = form.technique === "Outro" ? form.customTechnique.trim() : form.technique;
@@ -120,7 +135,7 @@ export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting 
             min={1}
             max={20}
             value={form.setsCount}
-            onChange={(e) => setSetsCount(Number(e.target.value))}
+            onChange={(e) => setSetsCount(e.target.value)}
             className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>

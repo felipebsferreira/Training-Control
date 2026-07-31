@@ -173,20 +173,7 @@ export default function TodayWorkout() {
                   Ver treino completo
                 </Link>
               </div>
-              <div className="flex flex-col gap-3">
-                {sessionActive
-                  ? activeLog.sessionExercises.map((se) => (
-                      <ExerciseRunCard key={se.exerciseId} sessionExercise={se} logId={activeLog.id} />
-                    ))
-                  : selectedWorkout.exercises.map((exercise) => (
-                      <ExerciseRunCard
-                        key={exercise.id}
-                        sessionExercise={toReadOnlySessionExercise(exercise)}
-                        readOnly
-                      />
-                    ))}
-              </div>
-              <div className="flex items-center gap-3 mt-3">
+              <div className="flex items-center gap-3 mb-4">
                 {sessionActive ? (
                   <>
                     <button
@@ -218,6 +205,19 @@ export default function TodayWorkout() {
                     Treino registrado ✓ ({formatDuration(lastFinished.durationMinutes)})
                   </span>
                 )}
+              </div>
+              <div className="flex flex-col gap-3">
+                {sessionActive
+                  ? activeLog.sessionExercises.map((se) => (
+                      <ExerciseRunCard key={se.exerciseId} sessionExercise={se} logId={activeLog.id} />
+                    ))
+                  : selectedWorkout.exercises.map((exercise) => (
+                      <ExerciseRunCard
+                        key={exercise.id}
+                        sessionExercise={toReadOnlySessionExercise(exercise)}
+                        readOnly
+                      />
+                    ))}
               </div>
             </div>
           )}
