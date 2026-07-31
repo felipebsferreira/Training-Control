@@ -39,10 +39,13 @@ app.use("/api/profile", profileRouter);
 app.use("/api/stats", statsRouter);
 
 if (isProduction) {
-  // Shared hosting (Passenger) routes every request for the domain to this
-  // app — there's no separate Nginx to split /api/* from the frontend build,
-  // so Express has to serve both.
-  const frontendDist = path.join(__dirname, "../../frontend/dist");
+  // Shared hosting routes every request for the domain to this app — there's
+  // no separate Nginx to split /api/* from the frontend build, so Express
+  // has to serve both. The build lives at backend/public (copied there at
+  // build time), not a sibling ../frontend/dist: this host deploys "backend"
+  // as an isolated copy with no sibling folders, so anything the app needs
+  // at runtime has to live inside backend/ itself.
+  const frontendDist = path.join(__dirname, "../public");
   app.use(express.static(frontendDist));
   app.get(/^(?!\/api).*/, (req, res) => {
     res.sendFile(path.join(frontendDist, "index.html"));

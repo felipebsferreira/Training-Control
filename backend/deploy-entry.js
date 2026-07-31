@@ -5,19 +5,18 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 if (process.env.NODE_ENV === "production") {
-  // Running npm install / a frontend build at runtime turned out to be
-  // unreliable on this host (network/permission restrictions inside the
-  // running app's process that don't apply to whatever install step the
-  // platform runs itself before starting the app) — so neither happens here
-  // anymore. frontend/dist is pre-built and committed to the repo instead
-  // (see .gitignore), and `prisma` is a regular dependency now rather than a
-  // devDependency, so it's installed by whatever install step the platform
-  // already runs.
-  //
+  // This host deploys "backend" as an isolated copy — no sibling frontend/
+  // folder, no monorepo root, and (it turns out) no dependencies pre-installed
+  // either. So install has to happen here, scoped strictly to this directory
+  // (no `../`): __dirname IS the project root as far as this running copy is
+  // concerned, since nothing outside it exists on this host.
+  console.log("Installing dependencies...");
+  execSync("npm install", { cwd: __dirname, stdio: "inherit" });
+
   // Wrapped in try/catch, not left to crash the app: @prisma/client's own
-  // postinstall may already have generated the client during that same
-  // install step, making this redundant but harmless when it works, and
-  // non-fatal when this specific command can't run here.
+  // postinstall may already have generated the client during the install
+  // above, making this redundant but harmless when it works, and non-fatal
+  // when this specific command can't run here.
   try {
     execSync("npx prisma generate", { cwd: __dirname, stdio: "inherit" });
   } catch (err) {
