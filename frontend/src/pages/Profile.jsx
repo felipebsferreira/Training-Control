@@ -110,16 +110,16 @@ export default function Profile() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
+          <div className="min-w-0">
             <label className="block text-sm font-medium text-slate-700 mb-1">Data de nascimento</label>
             <input
               type="date"
               value={birthDate}
               onChange={(e) => setBirthDate(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full min-w-0 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="block text-sm font-medium text-slate-700 mb-1">Sexo biológico</label>
             <select
               value={biologicalSex}

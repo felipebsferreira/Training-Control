@@ -11,11 +11,11 @@ const links = [
 
 function linkClasses({ isActive }) {
   return [
-    "flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors",
+    "flex flex-col items-center justify-center gap-1 text-xs transition-colors",
     "md:flex-row md:gap-2 md:text-sm md:px-4 md:py-2 md:rounded-lg",
     isActive
-      ? "text-indigo-600 md:bg-indigo-50 md:text-indigo-700"
-      : "text-slate-500 hover:text-slate-800 md:hover:bg-slate-100",
+      ? "text-indigo-600 font-semibold md:bg-indigo-50 md:text-indigo-700"
+      : "text-slate-500 font-medium hover:text-slate-800 md:hover:bg-slate-100",
   ].join(" ");
 }
 
@@ -65,8 +65,19 @@ export default function Nav() {
             end
             className={(state) => linkClasses(state) + " flex-1 py-2"}
           >
-            <span className="text-lg">{link.icon}</span>
-            <span>{link.label}</span>
+            {({ isActive }) => (
+              <>
+                <span
+                  className={
+                    "text-lg leading-none px-3 py-0.5 rounded-full transition-colors " +
+                    (isActive ? "bg-indigo-100" : "")
+                  }
+                >
+                  {link.icon}
+                </span>
+                <span>{link.label}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
