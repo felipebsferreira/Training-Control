@@ -41,11 +41,16 @@ app.use("/api/stats", statsRouter);
 if (isProduction) {
   // Shared hosting routes every request for the domain to this app — there's
   // no separate Nginx to split /api/* from the frontend build, so Express
-  // has to serve both. The build lives at backend/public (copied there at
-  // build time), not a sibling ../frontend/dist: this host deploys "backend"
-  // as an isolated copy with no sibling folders, so anything the app needs
-  // at runtime has to live inside backend/ itself.
-  const frontendDist = path.join(__dirname, "../public");
+  // has to serve both. FRONTEND_DIST_PATH is a full absolute path (e.g.
+  // /home/USERID/domains/example.com/frontend-dist), set as an env var,
+  // pointing at a location managed independently of the backend's own
+  // deploy (uploaded by hand, or however). It's deliberately NOT a path
+  // relative to this file: this host deploys "backend" as an isolated,
+  // re-created-on-every-deploy copy with no sibling folders, so anything
+  // living alongside the backend code would vanish on the next deploy.
+  // Falls back to backend/public for setups (or local testing) where the
+  // build is instead copied in at ../public relative to this file.
+  const frontendDist = process.env.FRONTEND_DIST_PATH || path.join(__dirname, "../public");
   app.use(express.static(frontendDist));
   app.get(/^(?!\/api).*/, (req, res) => {
     res.sendFile(path.join(frontendDist, "index.html"));
