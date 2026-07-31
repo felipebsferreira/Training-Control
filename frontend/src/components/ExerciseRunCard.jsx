@@ -21,7 +21,7 @@ export default function ExerciseRunCard({ sessionExercise, logId, readOnly }) {
     load !== "" &&
     Number.isFinite(Number(load)) &&
     Number(load) >= 0 &&
-    sets.every((s) => s.reps !== "" && Number.isInteger(Number(s.reps)) && Number(s.reps) > 0);
+    sets.every((s) => String(s.reps).trim() !== "");
 
   async function handleSave() {
     if (!isValid) return;
@@ -31,7 +31,7 @@ export default function ExerciseRunCard({ sessionExercise, logId, readOnly }) {
       const updated = await updateSessionExercise(logId, sessionExercise.exerciseId, {
         load: Number(load),
         loadUnit,
-        sets: sets.map((s) => ({ reps: Number(s.reps) })),
+        sets: sets.map((s) => ({ reps: String(s.reps).trim() })),
       });
       setSavedState({ load: updated.load, sets: updated.sets });
       setSaved(true);
@@ -102,7 +102,7 @@ export default function ExerciseRunCard({ sessionExercise, logId, readOnly }) {
             </div>
           </div>
 
-          <SetsEditor sets={sets} onChange={setSets} />
+          <SetsEditor sets={sets} onChange={setSets} technique={sessionExercise.technique} />
 
           <div className="flex items-center gap-3">
             <button

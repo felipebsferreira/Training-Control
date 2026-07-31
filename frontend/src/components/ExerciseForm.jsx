@@ -65,7 +65,7 @@ export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting 
     if (Number(form.restSecondsMin) > Number(form.restSecondsMax)) {
       return setError("Descanso mínimo não pode ser maior que o máximo");
     }
-    if (form.sets.some((s) => s.reps === "" || !Number.isInteger(Number(s.reps)) || Number(s.reps) <= 0)) {
+    if (form.sets.some((s) => !String(s.reps).trim())) {
       return setError("Informe as repetições de todas as séries");
     }
 
@@ -75,7 +75,7 @@ export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting 
       name: form.name.trim(),
       technique: technique || null,
       setsCount: form.setsCount,
-      sets: form.sets.map((s) => ({ reps: Number(s.reps) })),
+      sets: form.sets.map((s) => ({ reps: String(s.reps).trim() })),
       currentLoad: form.currentLoad === "" ? null : Number(form.currentLoad),
       loadUnit: form.loadUnit,
       restSecondsMin: Number(form.restSecondsMin),
@@ -186,7 +186,7 @@ export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting 
         </div>
       </div>
 
-      <SetsEditor sets={form.sets} onChange={(sets) => setField("sets", sets)} />
+      <SetsEditor sets={form.sets} onChange={(sets) => setField("sets", sets)} technique={form.technique} />
 
       <div className="flex gap-2 justify-end pt-2">
         <button

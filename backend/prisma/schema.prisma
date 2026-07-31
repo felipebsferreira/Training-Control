@@ -82,7 +82,7 @@ model ExerciseSet {
   id         Int      @id @default(autoincrement())
   exerciseId Int
   setNumber  Int
-  reps       Int
+  reps       String   @db.VarChar(100)
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@unique([exerciseId, setNumber])
@@ -105,7 +105,7 @@ model SessionSet {
   id                Int             @id @default(autoincrement())
   sessionExerciseId Int
   setNumber         Int
-  reps              Int
+  reps              String          @db.VarChar(100)
   sessionExercise   SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
 
   @@unique([sessionExerciseId, setNumber])

@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import { serializeExercise } from "../lib/serializers.js";
+import { isValidReps } from "../lib/reps.js";
 
 function validateExercisePayload(body) {
   const { name, setsCount, restSecondsMin, restSecondsMax, sets } = body;
@@ -17,8 +18,8 @@ function validateExercisePayload(body) {
   if (!Array.isArray(sets) || sets.length !== setsCount) {
     return "Número de repetições deve ser informado para cada série";
   }
-  if (sets.some((s) => !Number.isInteger(s.reps) || s.reps < 1)) {
-    return "Repetições devem ser números inteiros maiores que zero";
+  if (sets.some((s) => !isValidReps(s.reps))) {
+    return "Repetições devem ser informadas para todas as séries";
   }
 
   return null;
@@ -60,7 +61,7 @@ export async function createExercise(req, res) {
       loadUnit: loadUnit || "kg",
       orderIndex: (lastExercise?.orderIndex ?? -1) + 1,
       sets: {
-        create: sets.map((s, i) => ({ setNumber: i + 1, reps: s.reps })),
+        create: sets.map((s, i) => ({ setNumber: i + 1, reps: s.reps.trim() })),
       },
     },
     include: { sets: { orderBy: { setNumber: "asc" } } },
@@ -101,7 +102,7 @@ export async function updateExercise(req, res) {
         currentLoad: currentLoad ?? null,
         loadUnit: loadUnit || "kg",
         sets: {
-          create: sets.map((s, i) => ({ setNumber: i + 1, reps: s.reps })),
+          create: sets.map((s, i) => ({ setNumber: i + 1, reps: s.reps.trim() })),
         },
       },
     });

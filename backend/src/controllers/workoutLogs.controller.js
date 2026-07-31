@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import { isValidReps, repsToCount } from "../lib/reps.js";
 
 function serializeSessionExercise(se) {
   return {
@@ -92,7 +93,7 @@ export async function finishWorkoutLog(req, res) {
   });
 
   const totalVolume = log.sessionExercises.reduce((sum, se) => {
-    const reps = se.sets.reduce((s, set) => s + set.reps, 0);
+    const reps = se.sets.reduce((s, set) => s + repsToCount(set.reps), 0);
     return sum + (se.load ?? 0) * reps;
   }, 0);
 
@@ -138,7 +139,7 @@ export async function updateSessionExercise(req, res) {
   if (typeof load !== "number" || !Number.isFinite(load) || load < 0) {
     return res.status(400).json({ error: "Carga inválida" });
   }
-  if (!Array.isArray(sets) || sets.length === 0 || sets.some((s) => !Number.isInteger(s.reps) || s.reps < 1)) {
+  if (!Array.isArray(sets) || sets.length === 0 || sets.some((s) => !isValidReps(s.reps))) {
     return res.status(400).json({ error: "Repetições inválidas" });
   }
 
@@ -151,7 +152,7 @@ export async function updateSessionExercise(req, res) {
       data: {
         load,
         loadUnit: unit,
-        sets: { create: sets.map((s, i) => ({ setNumber: i + 1, reps: s.reps })) },
+        sets: { create: sets.map((s, i) => ({ setNumber: i + 1, reps: s.reps.trim() })) },
       },
     }),
     prisma.exercise.update({ where: { id: exerciseId }, data: { currentLoad: load, loadUnit: unit } }),
