@@ -26,4 +26,9 @@ if (process.env.NODE_ENV === "production") {
   execSync("npm run build -w frontend", { cwd: rootDir, stdio: "inherit" });
 }
 
-await import("./src/server.js");
+// No top-level `await` here on purpose: Hostinger's Node host (OpenLiteSpeed's
+// lsnode.js) loads this file via require(), and require() of an ESM module
+// with a top-level await throws ERR_REQUIRE_ASYNC_MODULE. A bare (un-awaited)
+// dynamic import is fine — server.js's own top-level code still runs once the
+// import resolves, nothing here needs to block on it finishing first.
+import("./src/server.js");
