@@ -175,16 +175,16 @@ export default function Stats() {
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-6">
+      <div className="flex gap-1 bg-slate-100 rounded-lg p-1 mb-6">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => openTab(tab.key)}
             className={
-              "text-sm font-medium text-center px-2 py-2 rounded-lg border transition-colors " +
+              "flex-1 text-sm font-medium text-center px-2 py-2 rounded-md transition-colors " +
               (activeTab === tab.key
-                ? "bg-indigo-600 border-indigo-600 text-white"
-                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50")
+                ? "bg-white text-indigo-700 shadow-sm"
+                : "text-slate-500 hover:text-slate-700")
             }
           >
             {tab.label}
