@@ -13,8 +13,8 @@ api.interceptors.response.use(
   }
 );
 
-export async function registerUser(email, password) {
-  const { data } = await api.post("/auth/register", { email, password });
+export async function registerUser(email, password, inviteCode) {
+  const { data } = await api.post("/auth/register", { email, password, inviteCode });
   return data;
 }
 

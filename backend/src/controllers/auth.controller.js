@@ -6,7 +6,15 @@ function serializeUser(user) {
 }
 
 export async function register(req, res) {
-  const { email, password } = req.body;
+  const { email, password, inviteCode } = req.body;
+
+  // Optional gate: when REGISTRATION_SECRET is set, only requests carrying
+  // the matching code can create an account. Unset (e.g. local dev) leaves
+  // registration open, same as before this existed.
+  const requiredSecret = process.env.REGISTRATION_SECRET;
+  if (requiredSecret && inviteCode !== requiredSecret) {
+    return res.status(403).json({ error: "Código de convite inválido" });
+  }
 
   if (!email || !email.includes("@")) {
     return res.status(400).json({ error: "Email inválido" });
