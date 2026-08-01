@@ -21,6 +21,6 @@ export function serializeExercise(exercise) {
     currentLoad: exercise.currentLoad,
     loadUnit: exercise.loadUnit,
     orderIndex: exercise.orderIndex,
-    sets: exercise.sets.map((s) => ({ setNumber: s.setNumber, reps: s.reps })),
+    sets: exercise.sets.map((s) => ({ setNumber: s.setNumber, reps: s.reps, load: s.load })),
   };
 }

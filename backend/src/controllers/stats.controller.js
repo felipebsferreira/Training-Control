@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-import { repsToCount } from "../lib/reps.js";
+import { sessionExerciseVolume } from "../lib/volume.js";
 
 function localDateKey(date) {
   const y = date.getFullYear();
@@ -130,10 +130,7 @@ export async function getVolumeHistory(req, res) {
 
   res.json(
     logs.map((log) => {
-      const volume = log.sessionExercises.reduce((sum, se) => {
-        const reps = se.sets.reduce((s, set) => s + repsToCount(set.reps), 0);
-        return sum + (se.load ?? 0) * reps;
-      }, 0);
+      const volume = log.sessionExercises.reduce((sum, se) => sum + sessionExerciseVolume(se), 0);
       return { recordedAt: log.startedAt, volume };
     })
   );

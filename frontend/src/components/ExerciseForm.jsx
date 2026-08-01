@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { TECHNIQUE_PRESETS } from "../api/client.js";
+import { TECHNIQUE_PRESETS, parseRepsRange } from "../api/client.js";
 import SetsEditor from "./SetsEditor.jsx";
+
+const PYRAMID_TECHNIQUES = ["Pirâmide Crescente", "Pirâmide Decrescente"];
 
 function buildInitialState(exercise) {
   if (exercise) {
@@ -9,7 +11,7 @@ function buildInitialState(exercise) {
       technique: TECHNIQUE_PRESETS.includes(exercise.technique) ? exercise.technique : "Outro",
       customTechnique: TECHNIQUE_PRESETS.includes(exercise.technique) ? "" : exercise.technique || "",
       setsCount: exercise.setsCount,
-      sets: exercise.sets.map((s) => ({ reps: s.reps })),
+      sets: exercise.sets.map((s) => ({ reps: s.reps, load: s.load ?? "" })),
       currentLoad: exercise.currentLoad ?? "",
       loadUnit: exercise.loadUnit || "kg",
       restSecondsMin: exercise.restSecondsMin,
@@ -21,7 +23,7 @@ function buildInitialState(exercise) {
     technique: "Normal",
     customTechnique: "",
     setsCount: 3,
-    sets: [{ reps: 12 }, { reps: 12 }, { reps: 12 }],
+    sets: [{ reps: 12, load: "" }, { reps: 12, load: "" }, { reps: 12, load: "" }],
     currentLoad: "",
     loadUnit: "kg",
     restSecondsMin: 60,
@@ -32,6 +34,9 @@ function buildInitialState(exercise) {
 export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting }) {
   const [form, setForm] = useState(() => buildInitialState(exercise));
   const [error, setError] = useState(null);
+
+  const isPyramid = PYRAMID_TECHNIQUES.includes(form.technique);
+  const isNormalRange = form.technique === "Normal";
 
   function setField(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -46,7 +51,9 @@ export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting 
     if (!Number.isInteger(parsed)) return;
     const clamped = Math.max(1, Math.min(20, parsed));
     setForm((f) => {
-      const nextSets = Array.from({ length: clamped }, (_, i) => f.sets[i] || { reps: f.sets.at(-1)?.reps ?? 12 });
+      const nextSets = Array.from({ length: clamped }, (_, i) =>
+        f.sets[i] || { reps: f.sets.at(-1)?.reps ?? 12, load: f.sets.at(-1)?.load ?? "" }
+      );
       return { ...f, setsCount: clamped, sets: nextSets };
     });
   }
@@ -65,8 +72,24 @@ export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting 
     if (Number(form.restSecondsMin) > Number(form.restSecondsMax)) {
       return setError("Descanso mínimo não pode ser maior que o máximo");
     }
-    if (form.sets.some((s) => !String(s.reps).trim())) {
-      return setError("Informe as repetições de todas as séries");
+    if (isNormalRange) {
+      const { min, max } = parseRepsRange(form.sets[0]?.reps);
+      if (!Number.isInteger(Number(min)) || !Number.isInteger(Number(max)) || Number(min) < 1 || Number(max) < 1) {
+        return setError("Informe a faixa de repetições");
+      }
+      if (Number(min) > Number(max)) {
+        return setError("Repetição mínima não pode ser maior que a máxima");
+      }
+    } else {
+      if (form.sets.some((s) => !String(s.reps).trim())) {
+        return setError("Informe as repetições de todas as séries");
+      }
+      if (
+        isPyramid &&
+        form.sets.some((s) => s.load === "" || s.load == null || !Number.isFinite(Number(s.load)) || Number(s.load) < 0)
+      ) {
+        return setError("Informe a carga de todas as séries");
+      }
     }
 
     const technique = form.technique === "Outro" ? form.customTechnique.trim() : form.technique;
@@ -75,7 +98,10 @@ export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting 
       name: form.name.trim(),
       technique: technique || null,
       setsCount: form.setsCount,
-      sets: form.sets.map((s) => ({ reps: String(s.reps).trim() })),
+      sets: form.sets.map((s) => ({
+        reps: String(s.reps).trim(),
+        ...(isPyramid ? { load: Number(s.load) } : {}),
+      })),
       currentLoad: form.currentLoad === "" ? null : Number(form.currentLoad),
       loadUnit: form.loadUnit,
       restSecondsMin: Number(form.restSecondsMin),
@@ -139,17 +165,19 @@ export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting 
             className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Carga atual</label>
-          <input
-            type="number"
-            min={0}
-            step="0.5"
-            value={form.currentLoad}
-            onChange={(e) => setField("currentLoad", e.target.value)}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
+        {!isPyramid && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Carga atual</label>
+            <input
+              type="number"
+              min={0}
+              step="0.5"
+              value={form.currentLoad}
+              onChange={(e) => setField("currentLoad", e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Unidade</label>
           <select
@@ -186,7 +214,12 @@ export default function ExerciseForm({ exercise, onSubmit, onCancel, submitting 
         </div>
       </div>
 
-      <SetsEditor sets={form.sets} onChange={(sets) => setField("sets", sets)} technique={form.technique} />
+      <SetsEditor
+        sets={form.sets}
+        onChange={(sets) => setField("sets", sets)}
+        technique={form.technique}
+        loadUnit={form.loadUnit}
+      />
 
       <div className="flex gap-2 justify-end pt-2">
         <button

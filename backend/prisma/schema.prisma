@@ -83,6 +83,7 @@ model ExerciseSet {
   exerciseId Int
   setNumber  Int
   reps       String   @db.VarChar(100)
+  load       Float?
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@unique([exerciseId, setNumber])
@@ -106,6 +107,7 @@ model SessionSet {
   sessionExerciseId Int
   setNumber         Int
   reps              String          @db.VarChar(100)
+  load              Float?
   sessionExercise   SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
 
   @@unique([sessionExerciseId, setNumber])

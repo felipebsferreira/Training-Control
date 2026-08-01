@@ -127,6 +127,23 @@ export function formatDuration(minutes) {
   return rest === 0 ? `${hours}h` : `${hours}h${String(rest).padStart(2, "0")}min`;
 }
 
+// "Normal" technique sets store a rep range ("12-15") instead of a single
+// number, edited as two "de/a" boxes wherever reps are entered (plan and
+// live session alike — see SetsEditor) instead of one box per set.
+const REPS_RANGE_PATTERN = /^(\d+)-(\d+)$/;
+
+export function formatReps(reps) {
+  const match = REPS_RANGE_PATTERN.exec(String(reps ?? "").trim());
+  return match ? `de ${match[1]} a ${match[2]}` : reps;
+}
+
+export function parseRepsRange(reps) {
+  const match = REPS_RANGE_PATTERN.exec(String(reps ?? "").trim());
+  if (match) return { min: match[1], max: match[2] };
+  const n = String(reps ?? "").trim();
+  return { min: n || "12", max: n || "12" };
+}
+
 export async function getProfile() {
   const { data } = await api.get("/profile");
   return data;

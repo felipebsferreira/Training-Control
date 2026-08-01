@@ -35,6 +35,21 @@ export default function TodayWorkout() {
   const [lastFinished, setLastFinished] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [completedExerciseIds, setCompletedExerciseIds] = useState(new Set());
+
+  function toggleCompleted(exerciseId) {
+    const next = new Set(completedExerciseIds);
+    if (next.has(exerciseId)) {
+      next.delete(exerciseId);
+    } else {
+      next.add(exerciseId);
+    }
+    setCompletedExerciseIds(next);
+
+    if (activeLog && next.size === activeLog.sessionExercises.length) {
+      handleFinish();
+    }
+  }
 
   const today = WEEKDAYS[new Date().getDay()];
 
@@ -60,6 +75,13 @@ export default function TodayWorkout() {
   const selectedWorkout = workouts?.find((w) => w.id === selectedId) ?? null;
   const sessionActive = Boolean(activeLog);
 
+  const orderedSessionExercises = useMemo(() => {
+    if (!activeLog) return [];
+    const pending = activeLog.sessionExercises.filter((se) => !completedExerciseIds.has(se.exerciseId));
+    const done = activeLog.sessionExercises.filter((se) => completedExerciseIds.has(se.exerciseId));
+    return [...pending, ...done];
+  }, [activeLog, completedExerciseIds]);
+
   async function handleStart() {
     if (!selectedWorkout) return;
     setBusy(true);
@@ -68,6 +90,7 @@ export default function TodayWorkout() {
       const log = await startWorkout(selectedWorkout.id);
       setActiveLog(log);
       setLastFinished(null);
+      setCompletedExerciseIds(new Set());
     } catch {
       setError("Não foi possível iniciar o treino");
     } finally {
@@ -83,6 +106,7 @@ export default function TodayWorkout() {
       const log = await finishWorkout(activeLog.id);
       setLastFinished({ workoutId: log.workoutId, durationMinutes: log.durationMinutes });
       setActiveLog(null);
+      setCompletedExerciseIds(new Set());
     } catch {
       setError("Não foi possível concluir o treino");
     } finally {
@@ -99,6 +123,7 @@ export default function TodayWorkout() {
       await cancelWorkout(activeLog.id);
       setActiveLog(null);
       setLastFinished(null);
+      setCompletedExerciseIds(new Set());
     } catch {
       setError("Não foi possível cancelar o treino");
     } finally {
@@ -208,8 +233,14 @@ export default function TodayWorkout() {
               </div>
               <div className="flex flex-col gap-3">
                 {sessionActive
-                  ? activeLog.sessionExercises.map((se) => (
-                      <ExerciseRunCard key={se.exerciseId} sessionExercise={se} logId={activeLog.id} />
+                  ? orderedSessionExercises.map((se) => (
+                      <ExerciseRunCard
+                        key={se.exerciseId}
+                        sessionExercise={se}
+                        logId={activeLog.id}
+                        completed={completedExerciseIds.has(se.exerciseId)}
+                        onToggleCompleted={() => toggleCompleted(se.exerciseId)}
+                      />
                     ))
                   : selectedWorkout.exercises.map((exercise) => (
                       <ExerciseRunCard

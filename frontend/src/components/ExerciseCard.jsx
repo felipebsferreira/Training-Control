@@ -1,5 +1,12 @@
+import { formatReps } from "../api/client.js";
+
+const PYRAMID_TECHNIQUES = ["Pirâmide Crescente", "Pirâmide Decrescente"];
+
 export default function ExerciseCard({ exercise, onEdit, onDelete }) {
-  const repsSummary = exercise.sets.map((s) => s.reps).join(" / ");
+  const isPyramid = PYRAMID_TECHNIQUES.includes(exercise.technique);
+  const allReps = exercise.sets.map((s) => s.reps);
+  const repsSummary = new Set(allReps).size === 1 ? formatReps(allReps[0]) : allReps.map(formatReps).join(" / ");
+  const loadSummary = exercise.sets.map((s) => s.load ?? "—").join(" / ");
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col gap-2">
@@ -40,9 +47,13 @@ export default function ExerciseCard({ exercise, onEdit, onDelete }) {
           <dd className="font-medium text-slate-700">{repsSummary}</dd>
         </div>
         <div>
-          <dt className="text-slate-400">Carga atual</dt>
+          <dt className="text-slate-400">{isPyramid ? "Carga por série" : "Carga atual"}</dt>
           <dd className="font-medium text-slate-700">
-            {exercise.currentLoad != null ? `${exercise.currentLoad} ${exercise.loadUnit}` : "—"}
+            {isPyramid
+              ? `${loadSummary} ${exercise.loadUnit}`
+              : exercise.currentLoad != null
+              ? `${exercise.currentLoad} ${exercise.loadUnit}`
+              : "—"}
           </dd>
         </div>
         <div>

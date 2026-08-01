@@ -1,5 +1,7 @@
 import { prisma } from "../lib/prisma.js";
-import { isValidReps, repsToCount } from "../lib/reps.js";
+import { isValidReps } from "../lib/reps.js";
+import { sessionExerciseVolume } from "../lib/volume.js";
+import { usesPerSetLoad } from "../lib/technique.js";
 
 function serializeSessionExercise(se) {
   return {
@@ -11,7 +13,7 @@ function serializeSessionExercise(se) {
     restSecondsMax: se.exercise.restSecondsMax,
     load: se.load,
     loadUnit: se.loadUnit,
-    sets: se.sets.map((s) => ({ setNumber: s.setNumber, reps: s.reps })),
+    sets: se.sets.map((s) => ({ setNumber: s.setNumber, reps: s.reps, load: s.load })),
   };
 }
 
@@ -63,7 +65,7 @@ export async function startWorkoutLog(req, res) {
         load: exercise.currentLoad,
         loadUnit: exercise.loadUnit,
         sets: {
-          create: exercise.sets.map((s) => ({ setNumber: s.setNumber, reps: s.reps })),
+          create: exercise.sets.map((s) => ({ setNumber: s.setNumber, reps: s.reps, load: s.load })),
         },
       },
     });
@@ -92,10 +94,7 @@ export async function finishWorkoutLog(req, res) {
     include: { workout: true },
   });
 
-  const totalVolume = log.sessionExercises.reduce((sum, se) => {
-    const reps = se.sets.reduce((s, set) => s + repsToCount(set.reps), 0);
-    return sum + (se.load ?? 0) * reps;
-  }, 0);
+  const totalVolume = log.sessionExercises.reduce((sum, se) => sum + sessionExerciseVolume(se), 0);
 
   res.json({ ...serializeLog(updated), totalVolume });
 }
@@ -132,15 +131,27 @@ export async function updateSessionExercise(req, res) {
 
   const sessionExercise = await prisma.sessionExercise.findUnique({
     where: { workoutLogId_exerciseId: { workoutLogId, exerciseId } },
+    include: { exercise: true },
   });
   if (!sessionExercise) return res.status(404).json({ error: "Exercício não encontrado nesta sessão" });
 
-  const { load, loadUnit, sets } = req.body;
-  if (typeof load !== "number" || !Number.isFinite(load) || load < 0) {
-    return res.status(400).json({ error: "Carga inválida" });
-  }
+  const { loadUnit, sets } = req.body;
   if (!Array.isArray(sets) || sets.length === 0 || sets.some((s) => !isValidReps(s.reps))) {
     return res.status(400).json({ error: "Repetições inválidas" });
+  }
+
+  const perSetLoad = usesPerSetLoad(sessionExercise.exercise.technique);
+  let load;
+  if (perSetLoad) {
+    if (sets.some((s) => typeof s.load !== "number" || !Number.isFinite(s.load) || s.load < 0)) {
+      return res.status(400).json({ error: "Informe a carga de todas as séries" });
+    }
+    load = Math.max(...sets.map((s) => s.load));
+  } else {
+    load = req.body.load;
+    if (typeof load !== "number" || !Number.isFinite(load) || load < 0) {
+      return res.status(400).json({ error: "Carga inválida" });
+    }
   }
 
   const unit = loadUnit || sessionExercise.loadUnit;
@@ -152,7 +163,13 @@ export async function updateSessionExercise(req, res) {
       data: {
         load,
         loadUnit: unit,
-        sets: { create: sets.map((s, i) => ({ setNumber: i + 1, reps: s.reps.trim() })) },
+        sets: {
+          create: sets.map((s, i) => ({
+            setNumber: i + 1,
+            reps: s.reps.trim(),
+            load: perSetLoad ? s.load : null,
+          })),
+        },
       },
     }),
     prisma.exercise.update({ where: { id: exerciseId }, data: { currentLoad: load, loadUnit: unit } }),

@@ -1,27 +1,43 @@
 import { useState } from "react";
-import { updateSessionExercise } from "../api/client.js";
+import { updateSessionExercise, formatReps } from "../api/client.js";
 import SetsEditor from "./SetsEditor.jsx";
 
-export default function ExerciseRunCard({ sessionExercise, logId, readOnly }) {
+const PYRAMID_TECHNIQUES = ["Pirâmide Crescente", "Pirâmide Decrescente"];
+
+export default function ExerciseRunCard({ sessionExercise, logId, readOnly, completed, onToggleCompleted }) {
+  const isPyramid = PYRAMID_TECHNIQUES.includes(sessionExercise.technique);
+
   const [load, setLoad] = useState(sessionExercise.load ?? "");
   const [loadUnit, setLoadUnit] = useState(sessionExercise.loadUnit);
-  const [sets, setSets] = useState(sessionExercise.sets.map((s) => ({ reps: s.reps })));
+  const [sets, setSets] = useState(sessionExercise.sets.map((s) => ({ reps: s.reps, load: s.load ?? "" })));
   const [saved, setSaved] = useState(false);
   const [savedState, setSavedState] = useState({ load: sessionExercise.load, sets: sessionExercise.sets });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  const repsSummary = sessionExercise.sets.map((s) => s.reps).join(" / ");
+  const allReps = sessionExercise.sets.map((s) => s.reps);
+  const repsSummary = new Set(allReps).size === 1 ? formatReps(allReps[0]) : allReps.map(formatReps).join(" / ");
+  const loadSummary = sessionExercise.sets.map((s) => s.load ?? "—").join(" / ");
 
   const dirty =
     String(load) !== String(savedState.load) ||
     loadUnit !== sessionExercise.loadUnit ||
-    JSON.stringify(sets.map((s) => s.reps)) !== JSON.stringify(savedState.sets.map((s) => s.reps));
-  const isValid =
-    load !== "" &&
-    Number.isFinite(Number(load)) &&
-    Number(load) >= 0 &&
-    sets.every((s) => String(s.reps).trim() !== "");
+    JSON.stringify(sets.map((s) => ({ reps: s.reps, load: s.load }))) !==
+      JSON.stringify(savedState.sets.map((s) => ({ reps: s.reps, load: s.load })));
+
+  const isValid = isPyramid
+    ? sets.every(
+        (s) =>
+          String(s.reps).trim() !== "" &&
+          s.load !== "" &&
+          s.load != null &&
+          Number.isFinite(Number(s.load)) &&
+          Number(s.load) >= 0
+      )
+    : load !== "" &&
+      Number.isFinite(Number(load)) &&
+      Number(load) >= 0 &&
+      sets.every((s) => String(s.reps).trim() !== "");
 
   async function handleSave() {
     if (!isValid) return;
@@ -29,9 +45,12 @@ export default function ExerciseRunCard({ sessionExercise, logId, readOnly }) {
     setError(null);
     try {
       const updated = await updateSessionExercise(logId, sessionExercise.exerciseId, {
-        load: Number(load),
+        ...(isPyramid ? {} : { load: Number(load) }),
         loadUnit,
-        sets: sets.map((s) => ({ reps: String(s.reps).trim() })),
+        sets: sets.map((s) => ({
+          reps: String(s.reps).trim(),
+          ...(isPyramid ? { load: Number(s.load) } : {}),
+        })),
       });
       setSavedState({ load: updated.load, sets: updated.sets });
       setSaved(true);
@@ -44,13 +63,33 @@ export default function ExerciseRunCard({ sessionExercise, logId, readOnly }) {
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col gap-3">
-      <div>
-        <h3 className="font-semibold text-slate-800">{sessionExercise.name}</h3>
-        {sessionExercise.technique && (
-          <span className="inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
-            {sessionExercise.technique}
-          </span>
+    <div
+      className={
+        "border rounded-xl p-4 flex flex-col gap-3 transition-colors " +
+        (completed ? "bg-emerald-50 border-emerald-200" : "bg-white border-slate-200")
+      }
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h3 className={"font-semibold " + (completed ? "text-slate-500 line-through" : "text-slate-800")}>
+            {sessionExercise.name}
+          </h3>
+          {sessionExercise.technique && (
+            <span className="inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+              {sessionExercise.technique}
+            </span>
+          )}
+        </div>
+        {!readOnly && (
+          <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 shrink-0 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={Boolean(completed)}
+              onChange={onToggleCompleted}
+              className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            Feito
+          </label>
         )}
       </div>
 
@@ -74,23 +113,43 @@ export default function ExerciseRunCard({ sessionExercise, logId, readOnly }) {
       {readOnly ? (
         <div className="pt-2 border-t border-slate-100">
           <p className="text-sm text-slate-500">
-            Carga: {sessionExercise.load != null ? `${sessionExercise.load} ${sessionExercise.loadUnit}` : "—"}
+            Carga:{" "}
+            {isPyramid
+              ? `${loadSummary} ${sessionExercise.loadUnit}`
+              : sessionExercise.load != null
+              ? `${sessionExercise.load} ${sessionExercise.loadUnit}`
+              : "—"}
           </p>
           <p className="text-xs text-slate-400 mt-1">Inicie o treino para registrar suas séries.</p>
         </div>
       ) : (
         <div className="pt-2 border-t border-slate-100 flex flex-col gap-3">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Carga usada hoje</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={0}
-                step="0.5"
-                value={load}
-                onChange={(e) => setLoad(e.target.value)}
-                className="w-24 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+          {!isPyramid && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Carga usada hoje</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.5"
+                  value={load}
+                  onChange={(e) => setLoad(e.target.value)}
+                  className="w-24 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <select
+                  value={loadUnit}
+                  onChange={(e) => setLoadUnit(e.target.value)}
+                  className="border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="kg">kg</option>
+                  <option value="lb">lb</option>
+                </select>
+              </div>
+            </div>
+          )}
+          {isPyramid && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Unidade</label>
               <select
                 value={loadUnit}
                 onChange={(e) => setLoadUnit(e.target.value)}
@@ -100,9 +159,9 @@ export default function ExerciseRunCard({ sessionExercise, logId, readOnly }) {
                 <option value="lb">lb</option>
               </select>
             </div>
-          </div>
+          )}
 
-          <SetsEditor sets={sets} onChange={setSets} technique={sessionExercise.technique} />
+          <SetsEditor sets={sets} onChange={setSets} technique={sessionExercise.technique} loadUnit={loadUnit} />
 
           <div className="flex items-center gap-3">
             <button

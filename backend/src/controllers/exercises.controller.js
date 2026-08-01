@@ -1,9 +1,14 @@
 import { prisma } from "../lib/prisma.js";
 import { serializeExercise } from "../lib/serializers.js";
 import { isValidReps } from "../lib/reps.js";
+import { usesPerSetLoad } from "../lib/technique.js";
+
+function isValidSetLoad(load) {
+  return typeof load === "number" && Number.isFinite(load) && load >= 0;
+}
 
 function validateExercisePayload(body) {
-  const { name, setsCount, restSecondsMin, restSecondsMax, sets } = body;
+  const { name, technique, setsCount, restSecondsMin, restSecondsMax, sets } = body;
 
   if (!name || !name.trim()) return "Nome do exercício é obrigatório";
   if (!Number.isInteger(setsCount) || setsCount < 1) {
@@ -20,6 +25,9 @@ function validateExercisePayload(body) {
   }
   if (sets.some((s) => !isValidReps(s.reps))) {
     return "Repetições devem ser informadas para todas as séries";
+  }
+  if (usesPerSetLoad(technique) && sets.some((s) => !isValidSetLoad(s.load))) {
+    return "Informe a carga de todas as séries";
   }
 
   return null;
@@ -49,6 +57,8 @@ export async function createExercise(req, res) {
     orderBy: { orderIndex: "desc" },
   });
 
+  const perSetLoad = usesPerSetLoad(technique?.trim());
+
   const exercise = await prisma.exercise.create({
     data: {
       workoutId,
@@ -57,11 +67,15 @@ export async function createExercise(req, res) {
       setsCount,
       restSecondsMin,
       restSecondsMax,
-      currentLoad: currentLoad ?? null,
+      currentLoad: perSetLoad ? Math.max(...sets.map((s) => s.load)) : currentLoad ?? null,
       loadUnit: loadUnit || "kg",
       orderIndex: (lastExercise?.orderIndex ?? -1) + 1,
       sets: {
-        create: sets.map((s, i) => ({ setNumber: i + 1, reps: s.reps.trim() })),
+        create: sets.map((s, i) => ({
+          setNumber: i + 1,
+          reps: s.reps.trim(),
+          load: perSetLoad ? s.load : null,
+        })),
       },
     },
     include: { sets: { orderBy: { setNumber: "asc" } } },
@@ -89,6 +103,8 @@ export async function updateExercise(req, res) {
     sets,
   } = req.body;
 
+  const perSetLoad = usesPerSetLoad(technique?.trim());
+
   await prisma.$transaction(async (tx) => {
     await tx.exerciseSet.deleteMany({ where: { exerciseId: id } });
     await tx.exercise.update({
@@ -99,10 +115,14 @@ export async function updateExercise(req, res) {
         setsCount,
         restSecondsMin,
         restSecondsMax,
-        currentLoad: currentLoad ?? null,
+        currentLoad: perSetLoad ? Math.max(...sets.map((s) => s.load)) : currentLoad ?? null,
         loadUnit: loadUnit || "kg",
         sets: {
-          create: sets.map((s, i) => ({ setNumber: i + 1, reps: s.reps.trim() })),
+          create: sets.map((s, i) => ({
+            setNumber: i + 1,
+            reps: s.reps.trim(),
+            load: perSetLoad ? s.load : null,
+          })),
         },
       },
     });
