@@ -6,6 +6,7 @@ import {
   finishWorkout,
   cancelWorkout,
   getActiveWorkoutLog,
+  listWorkoutLogs,
   formatDuration,
   WEEKDAYS,
 } from "../api/client.js";
@@ -13,6 +14,10 @@ import ExerciseRunCard from "../components/ExerciseRunCard.jsx";
 
 function formatTime(isoString) {
   return new Date(isoString).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function isSameLocalDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
 function toReadOnlySessionExercise(exercise) {
@@ -37,6 +42,7 @@ export default function TodayWorkout() {
   const [busy, setBusy] = useState(false);
   const [completedExerciseIds, setCompletedExerciseIds] = useState(new Set());
   const [expandedExerciseId, setExpandedExerciseId] = useState(null);
+  const [recentLogs, setRecentLogs] = useState([]);
 
   function toggleCompleted(exerciseId) {
     const wasCompleted = completedExerciseIds.has(exerciseId);
@@ -68,10 +74,11 @@ export default function TodayWorkout() {
   const today = WEEKDAYS[new Date().getDay()];
 
   useEffect(() => {
-    Promise.all([listWorkouts(), getActiveWorkoutLog()])
-      .then(([workoutsData, active]) => {
+    Promise.all([listWorkouts(), getActiveWorkoutLog(), listWorkoutLogs(20)])
+      .then(([workoutsData, active, logs]) => {
         setWorkouts(workoutsData);
         setActiveLog(active);
+        setRecentLogs(logs);
         if (active) {
           setSelectedId(active.workoutId);
           setExpandedExerciseId(active.sessionExercises[0]?.exerciseId ?? null);
@@ -89,6 +96,17 @@ export default function TodayWorkout() {
   );
   const selectedWorkout = workouts?.find((w) => w.id === selectedId) ?? null;
   const sessionActive = Boolean(activeLog);
+
+  const completedTodayForSelected = useMemo(() => {
+    if (!selectedWorkout) return false;
+    const now = new Date();
+    return recentLogs.some(
+      (log) =>
+        log.workoutId === selectedWorkout.id && log.finishedAt && isSameLocalDay(new Date(log.finishedAt), now)
+    );
+  }, [recentLogs, selectedWorkout]);
+
+  const showAlreadyDoneMessage = completedTodayForSelected && !sessionActive;
 
   const orderedSessionExercises = useMemo(() => {
     if (!activeLog) return [];
@@ -121,6 +139,7 @@ export default function TodayWorkout() {
     try {
       const log = await finishWorkout(activeLog.id);
       setLastFinished({ workoutId: log.workoutId, durationMinutes: log.durationMinutes });
+      setRecentLogs((prev) => [log, ...prev]);
       setActiveLog(null);
       setCompletedExerciseIds(new Set());
       setExpandedExerciseId(null);
@@ -249,27 +268,36 @@ export default function TodayWorkout() {
                   </span>
                 )}
               </div>
-              <div className="flex flex-col gap-3">
-                {sessionActive
-                  ? orderedSessionExercises.map((se) => (
-                      <ExerciseRunCard
-                        key={se.exerciseId}
-                        sessionExercise={se}
-                        logId={activeLog.id}
-                        completed={completedExerciseIds.has(se.exerciseId)}
-                        onToggleCompleted={() => toggleCompleted(se.exerciseId)}
-                        expanded={expandedExerciseId === se.exerciseId}
-                        onToggleExpand={() => toggleExpanded(se.exerciseId)}
-                      />
-                    ))
-                  : selectedWorkout.exercises.map((exercise) => (
-                      <ExerciseRunCard
-                        key={exercise.id}
-                        sessionExercise={toReadOnlySessionExercise(exercise)}
-                        readOnly
-                      />
-                    ))}
-              </div>
+              {showAlreadyDoneMessage ? (
+                <div className="bg-white border border-dashed border-slate-300 rounded-xl p-8 text-center">
+                  <p className="text-slate-600 font-medium mb-1">
+                    Você já concluiu o treino "{selectedWorkout.name}" hoje ✅
+                  </p>
+                  <p className="text-sm text-slate-400">Deseja fazer um novo treino? Toque em "Iniciar treino" acima.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {sessionActive
+                    ? orderedSessionExercises.map((se) => (
+                        <ExerciseRunCard
+                          key={se.exerciseId}
+                          sessionExercise={se}
+                          logId={activeLog.id}
+                          completed={completedExerciseIds.has(se.exerciseId)}
+                          onToggleCompleted={() => toggleCompleted(se.exerciseId)}
+                          expanded={expandedExerciseId === se.exerciseId}
+                          onToggleExpand={() => toggleExpanded(se.exerciseId)}
+                        />
+                      ))
+                    : selectedWorkout.exercises.map((exercise) => (
+                        <ExerciseRunCard
+                          key={exercise.id}
+                          sessionExercise={toReadOnlySessionExercise(exercise)}
+                          readOnly
+                        />
+                      ))}
+                </div>
+              )}
             </div>
           )}
         </>
