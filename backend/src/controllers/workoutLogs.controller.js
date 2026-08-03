@@ -174,6 +174,18 @@ export async function updateSessionExercise(req, res) {
     }),
     prisma.exercise.update({ where: { id: exerciseId }, data: { currentLoad: load, loadUnit: unit } }),
     prisma.loadHistory.create({ data: { exerciseId, load, loadUnit: unit } }),
+    // Pyramid techniques key their plan load off each set's own value
+    // (ExerciseCard shows per-set load, not currentLoad, for these) — keep
+    // the plan in sync with what was actually logged, same as currentLoad
+    // above does for every other technique.
+    ...(perSetLoad
+      ? sets.map((s, i) =>
+          prisma.exerciseSet.updateMany({
+            where: { exerciseId, setNumber: i + 1 },
+            data: { load: s.load },
+          })
+        )
+      : []),
   ]);
 
   const updated = await prisma.sessionExercise.findUnique({
