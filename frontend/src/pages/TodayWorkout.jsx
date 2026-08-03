@@ -36,19 +36,33 @@ export default function TodayWorkout() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [completedExerciseIds, setCompletedExerciseIds] = useState(new Set());
+  const [expandedExerciseId, setExpandedExerciseId] = useState(null);
 
   function toggleCompleted(exerciseId) {
+    const wasCompleted = completedExerciseIds.has(exerciseId);
     const next = new Set(completedExerciseIds);
-    if (next.has(exerciseId)) {
+    if (wasCompleted) {
       next.delete(exerciseId);
     } else {
       next.add(exerciseId);
     }
     setCompletedExerciseIds(next);
 
+    // Marking the currently expanded exercise as done: auto-expand whichever
+    // pending exercise now sits on top, so the user always lands on "what's
+    // next" without having to tap to expand it themselves.
+    if (!wasCompleted && activeLog && expandedExerciseId === exerciseId) {
+      const nextPending = activeLog.sessionExercises.find((se) => !next.has(se.exerciseId));
+      setExpandedExerciseId(nextPending ? nextPending.exerciseId : null);
+    }
+
     if (activeLog && next.size === activeLog.sessionExercises.length) {
       handleFinish();
     }
+  }
+
+  function toggleExpanded(exerciseId) {
+    setExpandedExerciseId((prev) => (prev === exerciseId ? null : exerciseId));
   }
 
   const today = WEEKDAYS[new Date().getDay()];
@@ -60,6 +74,7 @@ export default function TodayWorkout() {
         setActiveLog(active);
         if (active) {
           setSelectedId(active.workoutId);
+          setExpandedExerciseId(active.sessionExercises[0]?.exerciseId ?? null);
         } else {
           const scheduled = workoutsData.find((w) => w.daysOfWeek.includes(today.value));
           setSelectedId(scheduled ? scheduled.id : null);
@@ -91,6 +106,7 @@ export default function TodayWorkout() {
       setActiveLog(log);
       setLastFinished(null);
       setCompletedExerciseIds(new Set());
+      setExpandedExerciseId(log.sessionExercises[0]?.exerciseId ?? null);
     } catch {
       setError("Não foi possível iniciar o treino");
     } finally {
@@ -107,6 +123,7 @@ export default function TodayWorkout() {
       setLastFinished({ workoutId: log.workoutId, durationMinutes: log.durationMinutes });
       setActiveLog(null);
       setCompletedExerciseIds(new Set());
+      setExpandedExerciseId(null);
     } catch {
       setError("Não foi possível concluir o treino");
     } finally {
@@ -124,6 +141,7 @@ export default function TodayWorkout() {
       setActiveLog(null);
       setLastFinished(null);
       setCompletedExerciseIds(new Set());
+      setExpandedExerciseId(null);
     } catch {
       setError("Não foi possível cancelar o treino");
     } finally {
@@ -240,6 +258,8 @@ export default function TodayWorkout() {
                         logId={activeLog.id}
                         completed={completedExerciseIds.has(se.exerciseId)}
                         onToggleCompleted={() => toggleCompleted(se.exerciseId)}
+                        expanded={expandedExerciseId === se.exerciseId}
+                        onToggleExpand={() => toggleExpanded(se.exerciseId)}
                       />
                     ))
                   : selectedWorkout.exercises.map((exercise) => (
