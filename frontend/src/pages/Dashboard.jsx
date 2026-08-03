@@ -25,7 +25,7 @@ export default function Dashboard() {
     listWorkouts()
       .then(setWorkouts)
       .catch(() => setError("Não foi possível carregar os treinos"));
-    listWorkoutLogs().then(setLogs).catch(() => setLogs([]));
+    listWorkoutLogs(7).then(setLogs).catch(() => setLogs([]));
   }, []);
 
   if (error) return <p className="text-red-600">{error}</p>;

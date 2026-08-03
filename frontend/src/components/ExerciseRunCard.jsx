@@ -161,7 +161,13 @@ export default function ExerciseRunCard({ sessionExercise, logId, readOnly, comp
             </div>
           )}
 
-          <SetsEditor sets={sets} onChange={setSets} technique={sessionExercise.technique} loadUnit={loadUnit} />
+          <SetsEditor
+            sets={sets}
+            onChange={setSets}
+            technique={sessionExercise.technique}
+            loadUnit={loadUnit}
+            repsReadOnly
+          />
 
           <div className="flex items-center gap-3">
             <button
